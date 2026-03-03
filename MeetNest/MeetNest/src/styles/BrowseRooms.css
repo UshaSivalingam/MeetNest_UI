@@ -1,0 +1,199 @@
+/* ── PAGE ───────────────────────────────────────────────────────── */
+.browse-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: pageIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  font-family: 'Inter', sans-serif;
+}
+@keyframes pageIn {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────── */
+.browse-page__header {
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.browse-page__title {
+  font-family: 'Lora', serif; /* elegant heading */
+  font-size: clamp(18px, 3vw, 26px); font-weight: 400;
+  color: #1e3a5f; margin-bottom: 3px;
+}
+.browse-page__sub {
+  font-size: 12px; color: #94A3B8;
+  font-family: 'Inter', sans-serif; letter-spacing: 1px;
+}
+
+/* ── TOOLBAR ────────────────────────────────────────────────────── */
+.browse-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.browse-search {
+  position: relative; flex: 1; min-width: 220px; max-width: 360px;
+}
+.browse-search__icon {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; color: #94A3B8; pointer-events: none;
+}
+.browse-search__input {
+  width: 100%; padding: 11px 13px 11px 40px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(34,197,94,0.22);
+  background: rgba(240,253,244,0.70);
+  font-size: 13px; font-family: 'Inter', sans-serif; color: #1e3a5f;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.browse-search__input:focus {
+  border-color: rgba(22,163,74,0.45);
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.07);
+}
+
+.browse-filter-select {
+  padding: 10px 14px; border-radius: 12px;
+  border: 1.5px solid rgba(59,130,246,0.20);
+  background: rgba(239,246,255,0.70);
+  font-size: 13px; font-family: 'Inter', sans-serif; color: #1e3a5f;
+  outline: none; cursor: pointer; min-width: 150px; transition: border-color 0.2s;
+}
+.browse-filter-select:focus { border-color: rgba(37,99,235,0.45); }
+
+.browse-count-badge {
+  padding: 6px 14px; border-radius: 20px;
+  background: rgba(240,253,244,0.8); border: 1px solid rgba(34,197,94,0.18);
+  font-size: 12px; color: #16A34A; font-family: 'Inter', sans-serif;
+  letter-spacing: 1px; white-space: nowrap;
+}
+
+/* ── ROOM GRID ──────────────────────────────────────────────────── */
+.browse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+/* ── ROOM CARD ──────────────────────────────────────────────────── */
+.browse-card {
+  background: rgba(255,255,255,0.92);
+  border-radius: 20px;
+  border: 1.5px solid rgba(59,130,246,0.10);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(59,130,246,0.07);
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: cardIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
+  display: flex; flex-direction: column;
+  font-family: 'Inter', sans-serif;
+}
+.browse-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 36px rgba(59,130,246,0.14);
+}
+@keyframes cardIn {
+  from { opacity:0; transform:translateY(16px) scale(0.98); }
+  to   { opacity:1; transform:translateY(0)    scale(1);    }
+}
+
+/* Color top banner */
+.browse-card__banner { height: 5px; flex-shrink: 0; }
+.browse-card__banner--green  { background: linear-gradient(90deg,#22C55E,#16A34A); }
+.browse-card__banner--blue   { background: linear-gradient(90deg,#3B82F6,#2563EB); }
+.browse-card__banner--yellow { background: linear-gradient(90deg,#EAB308,#CA8A04); }
+.browse-card__banner--sky    { background: linear-gradient(90deg,#38BDF8,#0284C7); }
+.browse-card__banner--purple { background: linear-gradient(90deg,#A78BFA,#7C3AED); }
+.browse-card__banner--red    { background: linear-gradient(90deg,#F87171,#DC2626); }
+
+.browse-card__body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+
+/* Top row */
+.browse-card__top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; margin-bottom: 12px;
+}
+.browse-card__icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(34,197,94,0.12);
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.browse-card__status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 10px; font-family: 'Inter', sans-serif; font-weight: bold; letter-spacing: 1px;
+}
+.browse-card__status-badge--available   { background:#D1FAE5; color:#16A34A; }
+.browse-card__status-badge--unavailable { background:#FEE2E2; color:#DC2626; }
+.browse-card__status-badge--maintenance { background:#FEF9C3; color:#CA8A04; }
+
+/* Name + branch */
+.browse-card__name {
+  font-family: 'Lora', serif; font-size: 17px; font-weight: bold;
+  color: #1e3a5f; margin-bottom: 4px;
+}
+.browse-card__branch {
+  font-size: 11px; color: #94A3B8; font-family: 'Inter', sans-serif;
+  letter-spacing: 0.5px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* Meta row */
+.browse-card__meta {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.browse-card__cap {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; color: #1e3a5f; font-family: 'Inter', sans-serif;
+}
+
+/* Description */
+.browse-card__desc {
+  font-size: 12px; color: #94A3B8; font-family: 'Inter', sans-serif;
+  line-height: 1.55; margin-bottom: 12px; flex: 1;
+}
+
+/* Facilities tags */
+.browse-card__facilities {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 16px;
+}
+.browse-fac-tag {
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 10px; font-family: 'Inter', sans-serif; letter-spacing: 0.5px;
+  background: rgba(239,246,255,0.9); color: #2563EB;
+  border: 1px solid rgba(59,130,246,0.15);
+}
+.browse-fac-tag--more {
+  background: transparent; color: #94A3B8; border: none;
+  cursor: pointer; padding: 3px 6px;
+  transition: color 0.15s;
+}
+.browse-fac-tag--more:hover { color: #2563EB; }
+
+/* Book button */
+.browse-card__footer { margin-top: auto; }
+.btn-book {
+  width: 100%; padding: 12px;
+  border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #22C55E, #16A34A);
+  color: #fff; font-size: 13px; font-family: 'Inter', sans-serif;
+  font-weight: bold; letter-spacing: 1px; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(22,163,74,0.25);
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-book:hover  { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(22,163,74,0.35); }
+.btn-book:active { transform: scale(0.98); }
+.btn-book:disabled {
+  background: #CBD5E1; box-shadow: none; cursor: not-allowed; opacity: 1;
+}
+
+/* ── EMPTY / LOADING ─────────────────────────────────────────────── */
+.browse-empty {
+  grid-column: 1/-1; text-align: center; padding: 64px 24px;
+  background: rgba(255,255,255,0.7); border-radius: 20px;
+  border: 1.5px dashed rgba(34,197,94,0.22);
+  font-family: 'Inter', sans-serif;
+}
+.browse-empty__icon  { font-size: 52px; margin-bottom: 14px; }
+.browse-empty__title { font-family:'Lora', serif; font-size:18px; color:#1e3a5f; margin-bottom:6px; }
+.browse-empty__sub   { font-size:13px; color:#94A3B8; font-family:'Inter', sans-serif; }
+
+/* ... rest of modal, forms, alerts remain same but change all font-family to Inter except headings to Lora ... */

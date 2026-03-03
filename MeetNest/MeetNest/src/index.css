@@ -1,0 +1,46 @@
+/* src/index.css — Global reset */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin:     0;
+  padding:    0;
+}
+
+html, body {
+  width:      100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body {
+  font-family:             'Georgia', serif;
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color:        #fefce8;
+}
+
+#root {
+  width:      100%;
+  min-height: 100vh;
+}
+
+button {
+  cursor:      pointer;
+  border:      none;
+  background:  none;
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size:   inherit;
+}
+
+ul, ol { list-style: none; }
+
+a {
+  text-decoration: none;
+  color:           inherit;
+}

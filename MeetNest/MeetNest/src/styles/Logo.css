@@ -1,0 +1,32 @@
+/* src/styles/Logo.css */
+
+.logo {
+  text-align:    center;
+  margin-bottom: 6px;
+}
+
+.logo__text {
+  font-family:    'Georgia', serif;
+  font-weight:    400;
+  letter-spacing: 4px;
+  line-height:    1;
+}
+
+.logo__meet { color: #CA8A04; }
+.logo__n    { color: #16A34A; }
+.logo__est  { color: #2563EB; }
+
+.logo__underline {
+  height: 2px; margin: 7px auto 0;
+  background: linear-gradient(90deg, #EAB308, #22C55E, #3B82F6);
+  border-radius: 2px;
+}
+
+.logo--sm .logo__text      { font-size: 22px; letter-spacing: 3px; }
+.logo--sm .logo__underline { width: 90px; }
+
+.logo--md .logo__text      { font-size: 30px; }
+.logo--md .logo__underline { width: 130px; }
+
+.logo--lg .logo__text      { font-size: 42px; letter-spacing: 6px; }
+.logo--lg .logo__underline { width: 180px; }
