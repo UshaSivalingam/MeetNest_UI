@@ -7,11 +7,13 @@ import { RoomAPI } from "../api/roomAPI";
 import Pagination from "../components/Pagination";
 import "../styles/FacilityManagement.css";
 
-// ─── ICON OPTIONS ─────────────────────────────────────────────────
+// ─── BUILT-IN ICON OPTIONS ────────────────────────────────────────
 const FACILITY_ICONS = [
   "📽️","🖥️","📺","📡","🔊","🎙️","📷","🖨️","💻","⌨️",
   "🌡️","❄️","🌬️","💡","🔌","🔋","📶","🛋️","🪑","🚿",
   "☕","🍽️","🧴","🪟","🚪","🔒","🧹","♿","📋","🗂️",
+  "🖱️","🖲️","📠","📟","🧯","🪴","🗑️","🧲","🔧","🪛",
+  "🛠️","🔑","🪞","🛏️","🚻","🏋️","📦","🧸","🎯","🎮",
 ];
 
 const EMPTY_FORM = { name: "", description: "", icon: "🔧" };
@@ -27,11 +29,86 @@ function UsagePill({ count }) {
   );
 }
 
+// ─── ICON PICKER with Custom Input ───────────────────────────────
+function IconPicker({ value, onChange }) {
+  const [customMode, setCustomMode] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+  const [customError, setCustomError] = useState("");
+
+  // Check if current value is a built-in icon
+  const isBuiltIn = FACILITY_ICONS.includes(value);
+
+  const handleCustomApply = () => {
+    const trimmed = customInput.trim();
+    if (!trimmed) return setCustomError("Please enter an emoji or text.");
+    // Basic: accept 1–3 chars (emoji can be multi-char due to unicode)
+    if ([...trimmed].length > 3) return setCustomError("Keep it short — 1 emoji or up to 3 characters.");
+    setCustomError("");
+    onChange(trimmed);
+    setCustomMode(false);
+    setCustomInput("");
+  };
+
+  return (
+    <div>
+      {/* Built-in grid */}
+      <div className="icon-picker">
+        {FACILITY_ICONS.map((ico) => (
+          <button
+            key={ico}
+            type="button"
+            className={`icon-picker__btn${value === ico ? " icon-picker__btn--active" : ""}`}
+            onClick={() => { onChange(ico); setCustomMode(false); }}
+            title={ico}
+          >
+            {ico}
+          </button>
+        ))}
+      </div>
+
+      {/* Custom icon toggle */}
+      <div style={{ marginTop: 10, marginBottom: 16 }}>
+        {!customMode ? (
+          <button
+            type="button"
+            className="icon-picker__custom-toggle"
+            onClick={() => { setCustomMode(true); setCustomInput(isBuiltIn ? "" : value); }}
+          >
+            {isBuiltIn ? "✏️ Use custom icon / emoji" : `✏️ Change custom icon (current: ${value})`}
+          </button>
+        ) : (
+          <div className="icon-picker__custom-row">
+            <input
+              autoFocus
+              className="icon-picker__custom-input"
+              placeholder="Paste any emoji, e.g. 🎸"
+              value={customInput}
+              onChange={(e) => { setCustomInput(e.target.value); setCustomError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && handleCustomApply()}
+              maxLength={8}
+            />
+            <button type="button" className="icon-picker__custom-apply" onClick={handleCustomApply}>Apply</button>
+            <button type="button" className="icon-picker__custom-cancel"
+              onClick={() => { setCustomMode(false); setCustomError(""); setCustomInput(""); }}>
+              Cancel
+            </button>
+            {customError && (
+              <span style={{ fontSize: 11, color: "#DC2626", marginTop: 4, display: "block" }}>
+                {customError}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── FACILITY FORM MODAL ──────────────────────────────────────────
 function FacilityModal({ mode, facility, onClose, onSaved }) {
   const isEdit = mode === "edit";
 
-  const [form,    setForm]    = useState(isEdit ? {
+  const [form, setForm] = useState(isEdit ? {
     name:        facility.name        || "",
     description: facility.description || "",
     icon:        facility.icon        || "🔧",
@@ -56,7 +133,7 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
       const payload = {
         name:        form.name.trim(),
         description: form.description.trim(),
-        icon:        form.icon,
+        icon:        form.icon,   // ← always sent
       };
       if (isEdit) {
         await FacilityAPI.update(facility.id, payload);
@@ -96,19 +173,10 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
 
         {/* Icon picker */}
         <label className="form-label">Choose Icon</label>
-        <div className="icon-picker">
-          {FACILITY_ICONS.map((ico) => (
-            <button
-              key={ico}
-              type="button"
-              className={`icon-picker__btn${form.icon === ico ? " icon-picker__btn--active" : ""}`}
-              onClick={() => setForm((p) => ({ ...p, icon: ico }))}
-              title={ico}
-            >
-              {ico}
-            </button>
-          ))}
-        </div>
+        <IconPicker
+          value={form.icon}
+          onChange={(ico) => setForm((p) => ({ ...p, icon: ico }))}
+        />
 
         {/* Preview */}
         <div style={{
@@ -240,23 +308,34 @@ export default function FacilityManagement() {
       const [facRes, roomsRes] = await Promise.allSettled([
         FacilityAPI.getAll(), RoomAPI.getAll(),
       ]);
-      const facList  = facRes.status   === "fulfilled" ? (facRes.value   || []) : [];
-      const roomList = roomsRes.status === "fulfilled" ? (roomsRes.value || []) : [];
+      const facList  = facRes.status   === "fulfilled" ? (facRes.value?.items ?? facRes.value ?? []) : [];
+      const roomList = roomsRes.status === "fulfilled" ? (roomsRes.value?.items ?? roomsRes.value ?? []) : [];
       setFacilities(facList);
 
+      // ── Build usageMap: facilityId → room count ──────────────────
+      // FIX: backend now returns [{facilityId, name, icon}] instead of [string]
       const counts = {};
       facList.forEach((f) => { counts[f.id] = 0; });
+
       await Promise.allSettled(roomList.map(async (room) => {
         try {
           const roomFacs = await RoomFacilityAPI.getByRoom(room.id);
           if (Array.isArray(roomFacs)) {
             roomFacs.forEach((rf) => {
-              const fid = rf.facilityId ?? rf.facility?.id ?? rf.id;
-              if (fid !== undefined) counts[fid] = (counts[fid] || 0) + 1;
+              // Handle both object shape {facilityId} and legacy string shape
+              let fid;
+              if (typeof rf === "object" && rf !== null) {
+                fid = rf.facilityId ?? rf.facility?.id ?? rf.id;
+              }
+              // Skip plain strings — they carry no ID
+              if (fid !== undefined && fid !== null) {
+                counts[fid] = (counts[fid] || 0) + 1;
+              }
             });
           }
-        } catch { /* ignore */ }
+        } catch { /* ignore per-room errors */ }
       }));
+
       setUsageMap(counts);
     } catch (e) { setError(e.message || "Failed to load facilities."); }
     finally     { setLoading(false); }
@@ -279,7 +358,7 @@ export default function FacilityManagement() {
     }
 
     list.sort((a, b) => {
-      if (sortBy === "name")      return (a.name || "").localeCompare(b.name || "");
+      if (sortBy === "name")       return (a.name || "").localeCompare(b.name || "");
       if (sortBy === "usage-desc") return (usageMap[b.id] || 0) - (usageMap[a.id] || 0);
       if (sortBy === "usage-asc")  return (usageMap[a.id] || 0) - (usageMap[b.id] || 0);
       return 0;
@@ -291,8 +370,9 @@ export default function FacilityManagement() {
 
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const totalUsed             = facilities.filter((f) => (usageMap[f.id] || 0) > 0).length;
-  const totalRoomAssignments  = Object.values(usageMap).reduce((s, v) => s + v, 0);
+  const totalUsed            = facilities.filter((f) => (usageMap[f.id] || 0) > 0).length;
+  const totalUnused          = facilities.filter((f) => (usageMap[f.id] || 0) === 0).length;
+  const totalRoomAssignments = Object.values(usageMap).reduce((s, v) => s + v, 0);
 
   const openAdd    = ()         => setModal({ type: "add" });
   const openEdit   = (facility) => setModal({ type: "edit",   facility });
@@ -300,6 +380,11 @@ export default function FacilityManagement() {
   const closeModal = ()         => setModal(null);
   const handleSaved   = () => { closeModal(); fetchAll(); };
   const handleDeleted = () => { closeModal(); fetchAll(); };
+
+  // ── Stat card click → toggle filter ──────────────────────────
+  const handleStatClick = (filterValue) => {
+    setUsageFilter((prev) => prev === filterValue ? "all" : filterValue);
+  };
 
   return (
     <div className="facility-page">
@@ -313,31 +398,78 @@ export default function FacilityManagement() {
         <button className="btn-add-facility" onClick={openAdd}><span>+</span> Add Facility</button>
       </div>
 
-      {/* ── Summary stats ── */}
+      {/* ── Summary stats (CLICKABLE) ── */}
       <div className="facility-stats">
-        <div className="facility-stat-card">
+
+        {/* Total — clicking clears filter */}
+        <div
+          className={`facility-stat-card facility-stat-card--clickable${usageFilter === "all" ? " facility-stat-card--active" : ""}`}
+          onClick={() => setUsageFilter("all")}
+          title="Show all facilities"
+        >
           <div className="facility-stat-card__icon facility-stat-card__icon--blue">🔧</div>
-          <div><div className="facility-stat-card__value">{facilities.length}</div>
-               <div className="facility-stat-card__label">Total Facilities</div></div>
+          <div>
+            <div className="facility-stat-card__value">{facilities.length}</div>
+            <div className="facility-stat-card__label">Total Facilities</div>
+          </div>
+          {usageFilter === "all" && <span className="stat-active-dot" />}
         </div>
-        <div className="facility-stat-card">
+
+        {/* In Use */}
+        <div
+          className={`facility-stat-card facility-stat-card--clickable${usageFilter === "used" ? " facility-stat-card--active facility-stat-card--active-green" : ""}`}
+          onClick={() => handleStatClick("used")}
+          title="Filter: In Use only"
+        >
           <div className="facility-stat-card__icon facility-stat-card__icon--green">✅</div>
-          <div><div className="facility-stat-card__value">{totalUsed}</div>
-               <div className="facility-stat-card__label">In Use</div></div>
+          <div>
+            <div className="facility-stat-card__value">{totalUsed}</div>
+            <div className="facility-stat-card__label">In Use</div>
+          </div>
+          {usageFilter === "used" && <span className="stat-active-dot stat-active-dot--green" />}
         </div>
-        <div className="facility-stat-card">
+
+        {/* Room Assignments */}
+        <div
+          className="facility-stat-card"
+          title="Total room–facility assignments"
+        >
           <div className="facility-stat-card__icon facility-stat-card__icon--yellow">🚪</div>
-          <div><div className="facility-stat-card__value">{totalRoomAssignments}</div>
-               <div className="facility-stat-card__label">Room Assignments</div></div>
+          <div>
+            <div className="facility-stat-card__value">{totalRoomAssignments}</div>
+            <div className="facility-stat-card__label">Room Assignments</div>
+          </div>
         </div>
+
+        {/* Unused — NEW clickable card */}
+        <div
+          className={`facility-stat-card facility-stat-card--clickable${usageFilter === "unused" ? " facility-stat-card--active facility-stat-card--active-red" : ""}`}
+          onClick={() => handleStatClick("unused")}
+          title="Filter: Unused only"
+        >
+          <div className="facility-stat-card__icon facility-stat-card__icon--red">⭕</div>
+          <div>
+            <div className="facility-stat-card__value">{totalUnused}</div>
+            <div className="facility-stat-card__label">Unused</div>
+          </div>
+          {usageFilter === "unused" && <span className="stat-active-dot stat-active-dot--red" />}
+        </div>
+
       </div>
 
       {/* ── Toolbar ── */}
       <div className="facility-toolbar">
         <div className="facility-search">
           <span className="facility-search__icon">🔍</span>
-          <input className="facility-search__input" placeholder="Search facilities..."
-            value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input
+            className="facility-search__input"
+            placeholder="Search facilities..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="facility-search__clear" onClick={() => setSearch("")} title="Clear search">✕</button>
+          )}
         </div>
         <select className="facility-filter-select" value={usageFilter}
           onChange={(e) => setUsageFilter(e.target.value)}>
@@ -351,6 +483,15 @@ export default function FacilityManagement() {
           <option value="usage-desc">Sort: Most Used</option>
           <option value="usage-asc">Sort: Least Used</option>
         </select>
+        {(search || usageFilter !== "all") && (
+          <button
+            className="facility-clear-all-btn"
+            onClick={() => { setSearch(""); setUsageFilter("all"); }}
+            title="Clear all filters"
+          >
+            ✕ Clear all
+          </button>
+        )}
         <span className="facility-count-badge">
           {filtered.length} {filtered.length === 1 ? "facility" : "facilities"}
         </span>
@@ -369,7 +510,11 @@ export default function FacilityManagement() {
               {search || usageFilter !== "all" ? "No facilities match your filters" : "No facilities yet"}
             </div>
             <div className="facility-empty__sub">
-              {search || usageFilter !== "all" ? "Try clearing your filters" : "Click 'Add Facility' to get started"}
+              {search || usageFilter !== "all" ? (
+                <button className="facility-empty__reset" onClick={() => { setSearch(""); setUsageFilter("all"); }}>
+                  Clear filters
+                </button>
+              ) : "Click 'Add Facility' to get started"}
             </div>
           </div>
         ) : (

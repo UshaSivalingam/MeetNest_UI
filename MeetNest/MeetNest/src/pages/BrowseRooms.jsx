@@ -1,6 +1,6 @@
 // src/pages/BrowseRooms.jsx
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { RoomAPI } from "../api/roomAPI";
 import { RoomFacilityAPI } from "../api/RoomFacilityAPI";
 import { BookingAPI } from "../api/bookingAPI";
@@ -20,14 +20,11 @@ function toDateString(d) {
 }
 function todayStr() { return toDateString(new Date()); }
 
-// Converts local date + "HH:MM" → UTC ISO string
-// e.g. date="2026-03-05", time="10:30" in IST → "2026-03-05T05:00:00.000Z"
 function toUtcIso(dateStr, timeStr) {
   if (!dateStr || !timeStr) return null;
   return new Date(`${dateStr}T${timeStr}:00`).toISOString();
 }
 
-// Generate time options every 15 min: 07:00 → 21:00
 function buildTimeOptions() {
   const opts = [];
   for (let h = 7; h <= 21; h++) {
@@ -58,7 +55,6 @@ function durLabel(mins) {
   return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ""}` : `${m}m`;
 }
 
-// Default start: next :00 or :30 at least 30 min from now, clamped to 07:00–20:30
 function defaultStart() {
   const now = new Date();
   now.setMinutes(now.getMinutes() + 30);
@@ -102,68 +98,44 @@ function BookModal({ room, onClose, onBooked }) {
   const dur = calcDurMins(form.startTime, form.endTime);
 
   const validate = () => {
-    if (!form.date)                             return "Please select a date.";
-    if (!form.startTime || !form.endTime)       return "Please select start and end times.";
+    if (!form.date)                       return "Please select a date.";
+    if (!form.startTime || !form.endTime) return "Please select start and end times.";
     if (new Date(toUtcIso(form.date, form.startTime)) <= new Date())
-                                                return "Start time must be in the future.";
-    if (dur <= 0)   return "End time must be after start time.";
-    if (dur < 15)   return "Minimum booking duration is 15 minutes.";
-    if (dur > 480)  return "Maximum booking duration is 8 hours.";
+                                          return "Start time must be in the future.";
+    if (dur <= 0)  return "End time must be after start time.";
+    if (dur < 15)  return "Minimum booking duration is 15 minutes.";
+    if (dur > 480) return "Maximum booking duration is 8 hours.";
     return null;
   };
 
-const handleSubmit = async () => {
-  setAlert({ msg: "", type: "" });
+  const handleSubmit = async () => {
+    setAlert({ msg: "", type: "" });
+    const err = validate();
+    if (err) return setAlert({ msg: err, type: "error" });
+    setLoading(true);
+    try {
+      const payload = {
+        roomId:    Number(room.id),
+        startTime: toUtcIso(form.date, form.startTime),
+        endTime:   toUtcIso(form.date, form.endTime),
+        priority:  form.priority.charAt(0).toUpperCase() + form.priority.slice(1).toLowerCase(),
+        notes:     form.notes?.trim() || null,
+      };
+      await BookingAPI.create(payload);
+      setAlert({ msg: "Booking request submitted! Awaiting admin approval.", type: "success" });
+      setTimeout(() => onBooked(), 1500);
+    } catch (e) {
+      setAlert({ msg: e.message || "Something went wrong.", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const err = validate();
-  if (err) return setAlert({ msg: err, type: "error" });
-
-  setLoading(true);
-
-  try {
-    console.log("room:", room);
-    console.log("form:", form);
-
-    const payload = {
-      roomId: Number(room.id), // force number
-      //startTime: `${form.date}T${form.startTime}:00+00:00`,
-      //endTime: `${form.date}T${form.endTime}:00+00:00`,
-      startTime: toUtcIso(form.date, form.startTime),
-      endTime: toUtcIso(form.date, form.endTime),
-      priority:
-        form.priority.charAt(0).toUpperCase() +
-        form.priority.slice(1).toLowerCase(), // ensure enum match
-      notes: form.notes?.trim() || null,
-    };
-
-    console.log("FINAL PAYLOAD:", payload);
-
-    const result = await BookingAPI.create(payload);
-
-    console.log("SUCCESS RESPONSE:", result);
-
-    setAlert({
-      msg: "Booking request submitted! Awaiting admin approval.",
-      type: "success",
-    });
-    setTimeout(() => {
-     onBooked();
-      }, 1500);
-    //onBooked();
-  } catch (e) {
-    console.error("FULL ERROR OBJECT:", e);
-    setAlert({ msg: e.message || "Something went wrong.", type: "error" });
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // End time options — only times strictly after startTime
   const endOpts = TIME_OPTIONS.filter((o) => o.val > form.startTime);
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal bk-modal">
 
         <div className="modal__header">
           <h2 className="modal__title">📅 Book Room</h2>
@@ -172,13 +144,14 @@ const handleSubmit = async () => {
         <p className="modal__subtitle">Fill in the details to submit your request</p>
 
         {/* Room summary */}
-        <div className="book-room-info">
-          <div className="book-room-info__icon">🚪</div>
-          <div>
-            <div className="book-room-info__name">{room.name}</div>
-            <div className="book-room-info__meta">
-              🏢 {room.branchName || room.branch?.name || "—"}&nbsp;·&nbsp;
-              👥 {room.capacity ?? "—"} people
+        <div className="bk-room-info">
+          <div className="bk-room-info__icon">🚪</div>
+          <div className="bk-room-info__details">
+            <div className="bk-room-info__name">{room.name}</div>
+            <div className="bk-room-info__meta">
+              <span>🏢 {room.branchName || room.branch?.name || "—"}</span>
+              <span className="bk-room-info__dot">·</span>
+              <span>👥 {room.capacity ?? "—"} people</span>
             </div>
           </div>
         </div>
@@ -189,43 +162,27 @@ const handleSubmit = async () => {
           </div>
         )}
 
-        {/* ── Date ── */}
+        {/* Date */}
         <label className="form-label" htmlFor="bk-date">Date *</label>
-        <input
-          id="bk-date"
-          type="date"
+        <input id="bk-date" type="date"
           className="form-input form-input--green"
-          min={todayStr()}
-          value={form.date}
-          onChange={set("date")}
-          style={{ marginBottom: 14 }}
-        />
+          min={todayStr()} value={form.date} onChange={set("date")} />
 
-        {/* ── Start + End time dropdowns ── */}
-        <div className="form-row" style={{ gap: 12, marginBottom: 4 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Start + End */}
+        <div className="bk-time-row">
+          <div className="bk-time-col">
             <label className="form-label" htmlFor="bk-start">Start Time *</label>
-            <select
-              id="bk-start"
-              className="form-input form-input--green"
-              value={form.startTime}
-              onChange={handleStartChange}
-              style={{ width: "100%" }}
-            >
+            <select id="bk-start" className="form-input form-input--green"
+              value={form.startTime} onChange={handleStartChange}>
               {TIME_OPTIONS.map((o) => (
                 <option key={o.val} value={o.val}>{o.label}</option>
               ))}
             </select>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="bk-time-col">
             <label className="form-label" htmlFor="bk-end">End Time *</label>
-            <select
-              id="bk-end"
-              className="form-input form-input--green"
-              value={form.endTime}
-              onChange={set("endTime")}
-              style={{ width: "100%" }}
-            >
+            <select id="bk-end" className="form-input form-input--green"
+              value={form.endTime} onChange={set("endTime")}>
               {endOpts.map((o) => (
                 <option key={o.val} value={o.val}>{o.label}</option>
               ))}
@@ -234,47 +191,32 @@ const handleSubmit = async () => {
         </div>
 
         {/* Duration hint */}
-        <p
-          className={`form-hint${dur < 15 ? " form-hint--error" : ""}`}
-          style={{ marginBottom: 14 }}
-        >
+        <p className={`bk-hint${dur < 15 ? " bk-hint--error" : ""}`}>
           {dur <= 0 ? "⚠ End time must be after start time"
             : dur < 15 ? "⚠ Minimum booking is 15 minutes"
             : `⏱ Duration: ${durLabel(dur)}`}
         </p>
 
-        {/* ── Priority ── */}
+        {/* Priority */}
         <label className="form-label" htmlFor="bk-priority">Priority</label>
-        <select
-          id="bk-priority"
-          className="form-input"
-          value={form.priority}
-          onChange={set("priority")}
-          style={{ marginBottom: 14 }}
-        >
+        <select id="bk-priority" className="form-input" value={form.priority} onChange={set("priority")}>
           <option value="Low">🟢 Low — Normal request</option>
           <option value="Medium">🟡 Medium — Needs attention</option>
           <option value="High">🔴 High — Urgent</option>
         </select>
 
-        {/* ── Notes ── */}
+        {/* Notes */}
         <label className="form-label" htmlFor="bk-notes">
-          Notes
-          <span style={{ color: "#CBD5E1", fontWeight: 400, marginLeft: 6 }}>(optional)</span>
+          Notes <span className="form-label__opt">(optional)</span>
         </label>
-        <input
-          id="bk-notes"
-          className="form-input"
+        <input id="bk-notes" className="form-input"
           placeholder="e.g. Client meeting, team standup, special requirements"
-          value={form.notes}
-          onChange={set("notes")}
-          style={{ marginBottom: 20 }}
-        />
+          value={form.notes} onChange={set("notes")} />
 
         <div className="modal__footer">
           <button className="btn-cancel" onClick={onClose}>Cancel</button>
           <button className="btn-book-confirm" onClick={handleSubmit} disabled={loading}>
-            {loading ? "Submitting..." : "📅 Submit Request"}
+            {loading ? "Submitting..." : "Submit Request"}
           </button>
         </div>
 
@@ -302,7 +244,7 @@ function BrowseCard({ room, index, facilities, onBook }) {
         <div className="browse-card__top">
           <div className="browse-card__icon">🚪</div>
           <span className={`browse-card__status-badge browse-card__status-badge--${status}`}>
-            {status === "available"   ? "✅ Available"
+            {status === "available"    ? "✅ Available"
               : status === "unavailable" ? "🚫 Unavailable"
               : "🔧 Maintenance"}
           </span>
@@ -359,13 +301,11 @@ export default function BrowseRooms() {
   const [error,       setError]       = useState("");
   const [search,      setSearch]      = useState("");
   const [capacityMin, setCapacityMin] = useState("");
+  const [facFilter,   setFacFilter]   = useState("");
   const [sortBy,      setSortBy]      = useState("name");
   const [page,        setPage]        = useState(1);
   const [bookModal,   setBookModal]   = useState(null);
 
-  // ✅ FIX: No longer fetches /api/branches (AdminOnly → 403).
-  // Employees can only book rooms in their own branch anyway,
-  // so the branch filter dropdown is removed entirely.
   const fetchAll = useCallback(async () => {
     setLoading(true); setError("");
     try {
@@ -389,6 +329,15 @@ export default function BrowseRooms() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // ── All unique facility names across all rooms ──
+  const allFacilities = useMemo(() => {
+    const set = new Set();
+    Object.values(facilities).forEach(facs =>
+      facs.forEach(f => { if (f.name || f) set.add(f.name || f); })
+    );
+    return [...set].sort();
+  }, [facilities]);
+
   useEffect(() => {
     let list = [...rooms];
 
@@ -404,6 +353,13 @@ export default function BrowseRooms() {
         r.description?.toLowerCase().includes(q));
     }
 
+    // ── Facility filter ──
+    if (facFilter) {
+      list = list.filter((r) =>
+        (facilities[r.id] || []).some(f => (f.name || f) === facFilter)
+      );
+    }
+
     list.sort((a, b) => {
       if (sortBy === "name")          return (a.name || "").localeCompare(b.name || "");
       if (sortBy === "capacity-asc")  return (a.capacity ?? 0) - (b.capacity ?? 0);
@@ -413,10 +369,12 @@ export default function BrowseRooms() {
 
     setFiltered(list);
     setPage(1);
-  }, [search, capacityMin, sortBy, rooms]);
+  }, [search, capacityMin, facFilter, sortBy, rooms, facilities]);
 
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const hasFilters = search || capacityMin;
+  const hasFilters = search || capacityMin || facFilter;
+
+  const clearAll = () => { setSearch(""); setCapacityMin(""); setFacFilter(""); };
 
   return (
     <div className="browse-page">
@@ -428,43 +386,64 @@ export default function BrowseRooms() {
         </div>
       </div>
 
-      <div className="browse-toolbar">
-        {/* Search */}
-        <div className="browse-search">
-          <span className="browse-search__icon">🔍</span>
-          <input
-            className="browse-search__input"
-            placeholder="Search by room name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+    <div className="browse-toolbar">
 
-        {/* Min capacity */}
-        <input
-          type="number" min="1"
-          className="browse-filter-select"
-          style={{ maxWidth: 130, fontFamily: "monospace" }}
-          placeholder="Min capacity"
-          value={capacityMin}
-          onChange={(e) => setCapacityMin(e.target.value)}
-        />
+  {/* Search — full width like image 1 */}
+  <div className="browse-search">
+    <span className="browse-search__icon">🔍</span>
+    <input
+      className="browse-search__input"
+      placeholder="Search by room name..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+    {search && (
+      <button className="browse-search__clear" onClick={() => setSearch("")}>✕</button>
+    )}
+  </div>
 
-        {/* Sort */}
-        <select
-          className="browse-filter-select"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="name">Sort: Name A–Z</option>
-          <option value="capacity-asc">Sort: Smallest Room</option>
-          <option value="capacity-desc">Sort: Largest Room</option>
-        </select>
+  {/* Min capacity */}
+  <input
+    type="number" min="1"
+    className="browse-filter-select"
+    placeholder="Min capacity"
+    value={capacityMin}
+    onChange={(e) => setCapacityMin(e.target.value)}
+  />
 
-        <span className="browse-count-badge">
-          {filtered.length} {filtered.length === 1 ? "room" : "rooms"}
-        </span>
-      </div>
+  {/* Facility filter */}
+  <select
+    className="browse-filter-select"
+    value={facFilter}
+    onChange={(e) => setFacFilter(e.target.value)}
+  >
+    <option value="">All Facilities</option>
+    {allFacilities.map((f) => (
+      <option key={f} value={f}>{f}</option>
+    ))}
+  </select>
+
+  {/* Sort */}
+  <select
+    className="browse-filter-select"
+    value={sortBy}
+    onChange={(e) => setSortBy(e.target.value)}
+  >
+    <option value="name">Sort: Name A–Z</option>
+    <option value="capacity-asc">Sort: Smallest Room</option>
+    <option value="capacity-desc">Sort: Largest Room</option>
+  </select>
+
+  {/* Clear all — only when any filter active */}
+  {hasFilters && (
+    <button className="browse-clear-btn" onClick={clearAll}>✕ Clear</button>
+  )}
+
+  <span className="browse-count-badge">
+    {filtered.length} {filtered.length === 1 ? "room" : "rooms"}
+  </span>
+
+</div>
 
       {error && <div className="form-alert form-alert--error">⚠ {error}</div>}
 

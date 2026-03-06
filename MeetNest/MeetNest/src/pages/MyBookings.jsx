@@ -193,6 +193,8 @@ function CancelModal({ booking, onClose, onDone }) {
 }
 
 // ─── BOOKING CARD ─────────────────────────────────────────────────
+// BookingCard component only — replace the function in MyBookings.jsx
+
 function BookingCard({ booking, onDetail, onCancel }) {
   const meta      = sm(booking.status);
   const priMeta   = pm(booking.priority);
@@ -204,7 +206,7 @@ function BookingCard({ booking, onDetail, onCancel }) {
       <div className={`mybk-card__stripe mybk-card__stripe--${meta.cls}`} />
       <div className="mybk-card__body">
 
-        {/* Room + branch */}
+        {/* COL 1 — room info */}
         <div className="mybk-card__main">
           <div className="mybk-card__room">
             <span>🚪</span> {booking.roomName || "—"}
@@ -212,53 +214,48 @@ function BookingCard({ booking, onDetail, onCancel }) {
           <div className="mybk-card__branch">
             <span>🏢</span> {booking.branchName || "—"}
           </div>
-
-          {/* ✅ Employee's own notes — correct field: notes (not purpose) */}
           {booking.notes && (
             <div className="mybk-card__purpose">"{booking.notes}"</div>
           )}
-
-          {/* Priority badge */}
           <div style={{ marginTop: 4 }}>
-            <span className={`priority-badge priority-badge--${priMeta.cls}`} style={{ fontSize: 10 }}>
+            <span className={`priority-badge priority-badge--${priMeta.cls}`}>
               {priMeta.icon} {priMeta.label} Priority
             </span>
           </div>
         </div>
 
-        {/* Date / time */}
+        {/* COL 2 — date / time + rejection reason (stays in this column) */}
         <div className="mybk-card__when">
           <div className="mybk-card__date">{fmtDate(booking.startTime)}</div>
           <div className="mybk-card__time">
             {fmtTime(booking.startTime)} – {fmtTime(booking.endTime)}
             {durationLabel(booking.startTime, booking.endTime) && (
-              <span style={{ marginLeft: 6, color: "#CBD5E1" }}>
+              <span style={{ marginLeft: 5, color: "#CBD5E1" }}>
                 ({durationLabel(booking.startTime, booking.endTime)})
               </span>
             )}
           </div>
           {past && booking.status?.toLowerCase() === "approved" && (
-            <div style={{ fontSize: 10, color: "#94A3B8", fontFamily: "monospace", marginTop: 3 }}>
+            <div style={{ fontSize: 10, color: "#94A3B8", fontFamily: "monospace", marginTop: 2 }}>
               Completed
+            </div>
+          )}
+          {/* ✅ Rejection reason lives inside __when so it never breaks the grid */}
+          {(booking.status?.toLowerCase() === "rejected" || booking.status?.toLowerCase() === "cancelled")
+            && booking.overrideReason && (
+            <div className="mybk-rejection">
+              <span>💬</span>
+              <span>
+                <strong>
+                  {booking.status?.toLowerCase() === "rejected" ? "Rejected: " : "Cancelled: "}
+                </strong>
+                {booking.overrideReason}
+              </span>
             </div>
           )}
         </div>
 
-        {/* ✅ Admin reason — correct field: overrideReason (not rejectionReason) */}
-        {(booking.status?.toLowerCase() === "rejected" || booking.status?.toLowerCase() === "cancelled")
-          && booking.overrideReason && (
-          <div className="mybk-rejection">
-            <span>💬</span>
-            <span>
-              <strong>
-                {booking.status?.toLowerCase() === "rejected" ? "Rejected: " : "Cancelled: "}
-              </strong>
-              {booking.overrideReason}
-            </span>
-          </div>
-        )}
-
-        {/* Status + actions */}
+        {/* COL 3 — status + actions */}
         <div className="mybk-card__right">
           <span className={`mybk-status mybk-status--${meta.cls}`}>
             {meta.icon} {meta.label}

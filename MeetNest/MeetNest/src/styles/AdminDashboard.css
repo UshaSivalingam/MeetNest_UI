@@ -23,7 +23,7 @@
 }
 
 .dash__greeting-left h2 {
-  font-family:    'Georgia', serif;
+  font-family:    'Work Sans', sans-serif;
   font-size:      clamp(20px, 3vw, 28px);
   font-weight:    400;
   color:          #1e3a5f;
@@ -33,7 +33,7 @@
 .dash__greeting-left p {
   font-size:      13px;
   color:          #94A3B8;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   letter-spacing: 1px;
 }
 
@@ -47,7 +47,7 @@
   border-radius:  12px;
   font-size:      12px;
   color:          #64748B;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   letter-spacing: 1px;
   backdrop-filter: blur(10px);
 }
@@ -134,7 +134,7 @@
 
 .stat-card__trend {
   font-size:   11px;
-  font-family: monospace;
+  font-family: 'Work Sans', sans-serif;
   padding:     3px 8px;
   border-radius: 20px;
 }
@@ -144,7 +144,7 @@
 
 /* Value */
 .stat-card__value {
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   font-size:     clamp(28px, 4vw, 40px);
   font-weight:   400;
   color:         #1e3a5f;
@@ -163,7 +163,7 @@
   color:          #94A3B8;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   margin-bottom:  14px;
 }
 
@@ -210,7 +210,7 @@
 }
 
 .dash-panel__title {
-  font-family:    'Georgia', serif;
+  font-family:    'Work Sans', sans-serif;
   font-size:      16px;
   font-weight:    400;
   color:          #1e3a5f;
@@ -220,7 +220,7 @@
 .dash-panel__badge {
   font-size:      10px;
   color:          #94A3B8;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   letter-spacing: 2px;
   text-transform: uppercase;
   padding:        3px 10px;
@@ -263,7 +263,7 @@
 .donut-legend__label {
   font-size:      12px;
   color:          #64748B;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   letter-spacing: 0.5px;
   flex:           1;
 }
@@ -272,7 +272,7 @@
   font-size:   13px;
   font-weight: bold;
   color:       #1e3a5f;
-  font-family: 'Georgia', serif;
+  font-family: 'Work Sans', sans-serif;
 }
 
 /* ── QUICK ACTIONS ──────────────────────────────────────────────── */
@@ -291,7 +291,7 @@
   border-radius:  14px;
   border:         1.5px solid transparent;
   cursor:         pointer;
-  font-family:    'Georgia', serif;
+  font-family:    'Work Sans', sans-serif;
   text-align:     left;
   transition:     all 0.2s ease;
 }
@@ -306,7 +306,7 @@
 
 .quick-action-btn__sub {
   font-size:   10px;
-  font-family: monospace;
+  font-family: 'Work Sans', sans-serif;
   opacity:     0.7;
 }
 
@@ -373,7 +373,7 @@
   color:          #94A3B8;
   letter-spacing: 2px;
   text-transform: uppercase;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   padding:        0 10px 12px;
   border-bottom:  1.5px solid rgba(59, 130, 246, 0.10);
 }
@@ -383,7 +383,7 @@
   font-size:     13px;
   color:         #1e3a5f;
   border-bottom: 1px solid rgba(59, 130, 246, 0.06);
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   vertical-align: middle;
 }
 
@@ -399,7 +399,7 @@
   padding:        3px 10px;
   border-radius:  20px;
   font-size:      10px;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   letter-spacing: 1px;
   font-weight:    bold;
 }
@@ -446,7 +446,7 @@
   font-size:     13px;
   font-weight:   bold;
   color:         #1e3a5f;
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   white-space:   nowrap;
   overflow:      hidden;
   text-overflow: ellipsis;
@@ -455,14 +455,14 @@
 .branch-item__meta {
   font-size:   11px;
   color:       #94A3B8;
-  font-family: monospace;
+  font-family: 'Work Sans', sans-serif;
 }
 
 .branch-item__count {
   font-size:   13px;
   font-weight: bold;
   color:       #2563EB;
-  font-family: 'Georgia', serif;
+  font-family: 'Work Sans', sans-serif;
 }
 
 /* ── LOADING / ERROR STATES ─────────────────────────────────────── */
@@ -490,7 +490,7 @@
   text-align:     center;
   padding:        40px;
   color:          #DC2626;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   font-size:      13px;
   letter-spacing: 1px;
 }

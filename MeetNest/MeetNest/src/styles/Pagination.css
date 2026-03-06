@@ -15,7 +15,7 @@
 .pagination__info {
   font-size:      11px;
   color:          #94A3B8;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   letter-spacing: 1px;
 }
 
@@ -34,7 +34,7 @@
   background:    rgba(255, 255, 255, 0.85);
   color:         #64748B;
   font-size:     13px;
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   cursor:        pointer;
   transition:    all 0.15s;
   display:       flex;

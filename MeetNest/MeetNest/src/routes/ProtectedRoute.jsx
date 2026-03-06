@@ -1,29 +1,31 @@
 // src/routes/ProtectedRoute.jsx
 
+import { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
-/**
- * Props:
- *   children   — page to render if allowed
- *   role       — optional "admin" | "employee"
- *   onRedirect — called when access denied (navigate to login)
- */
 export default function ProtectedRoute({ children, role, onRedirect }) {
   const { isLoggedIn, isAdmin, isEmployee, loading } = useAuth();
 
+  const denied =
+    !loading &&
+    (
+      !isLoggedIn ||
+      (role === "admin" && !isAdmin) ||
+      (role === "employee" && !isEmployee)
+    );
+
+  useEffect(() => {
+    if (denied) {
+      onRedirect?.();
+    }
+  }, [denied, onRedirect]);
+
   if (loading) return <LoadingScreen />;
 
-  if (!isLoggedIn) {
-    onRedirect?.();
-    return null;
-  }
-
-  if (role === "admin"    && !isAdmin)    { onRedirect?.(); return null; }
-  if (role === "employee" && !isEmployee) { onRedirect?.(); return null; }
+  if (denied) return null;
 
   return children;
 }
-
 // ─── LOADING SCREEN ───────────────────────────────────────────────
 function LoadingScreen() {
   return (

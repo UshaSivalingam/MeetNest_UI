@@ -1,6 +1,6 @@
 // src/App.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute     from "./routes/ProtectedRoute";
 import WelcomePage        from "./pages/WelcomePage";
@@ -79,17 +79,23 @@ function PageContent({ currentPage, onNavigate }) {
 }
 
 // ─── INNER APP ────────────────────────────────────────────────────
+
 function InnerApp() {
   const { isLoggedIn } = useAuth();
-  const [page,        setPage]        = useState("welcome");
+  const [page, setPage] = useState("welcome");
   const [currentPage, setCurrentPage] = useState("dashboard");
 
+  useEffect(() => {
+    if (isLoggedIn && page !== "app") {
+      setPage("app");
+    }
+  }, [isLoggedIn, page]);
+
   if (page === "welcome") {
-    if (isLoggedIn) { setPage("app"); return null; }
     return <WelcomePage onFinish={() => setPage("login")} />;
   }
+
   if (page === "login") {
-    if (isLoggedIn) { setPage("app"); return null; }
     return (
       <LoginPage
         onLoginSuccess={() => setPage("app")}
@@ -97,7 +103,10 @@ function InnerApp() {
       />
     );
   }
-  if (page === "signup") return <SignupPage onBack={() => setPage("login")} />;
+
+  if (page === "signup") {
+    return <SignupPage onBack={() => setPage("login")} />;
+  }
 
   if (page === "app") {
     return (

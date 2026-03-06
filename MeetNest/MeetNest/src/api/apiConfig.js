@@ -9,7 +9,9 @@ export const ROUTES = {
     refreshToken:     `${BASE_URL}/auth/refresh-token`,
   },
   branch: {
-    getAll:  `${BASE_URL}/branches`,
+    getAll:       `${BASE_URL}/branches`,
+    getWithStats: `${BASE_URL}/branches/stats`,           // ← ADD (Bug 1 fix)
+    getSimple:    `${BASE_URL}/branches/simple`,
     getById: (id) => `${BASE_URL}/branches/${id}`,
     create:  `${BASE_URL}/branches`,
     update:  (id) => `${BASE_URL}/branches/${id}`,
@@ -124,6 +126,8 @@ async function handleResponse(response) {
     );
   }
 
+  // Unwrap PagedResult { items: [...], totalCount, page, pageSize }
+  // but only when items is an array — plain arrays and plain objects pass through as-is
   if (isJson && data && typeof data === "object" && Array.isArray(data.items)) {
     return data.items;
   }

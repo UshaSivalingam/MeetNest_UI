@@ -98,11 +98,8 @@ function DetailModal({ bookingId, onClose, onApprove, onReject }) {
         <Row label="Branch"   value={booking.branchName} />
         <Row label="Date"     value={fmtDate(booking.startTime)} />
         <Row label="Time"     value={`${fmtTime(booking.startTime)} – ${fmtTime(booking.endTime)}`} />
-
-        {/* Employee's booking reason/purpose */}
         {booking.notes && <Row label="Notes" value={booking.notes} />}
 
-        {/* Admin rejection/override reason */}
         {booking.overrideReason && (
           <div className="conflict-warning" style={{ background: "rgba(254,242,242,0.8)", borderColor: "rgba(239,68,68,0.25)" }}>
             <strong>💬 Admin Note:</strong> {booking.overrideReason}
@@ -111,7 +108,6 @@ function DetailModal({ bookingId, onClose, onApprove, onReject }) {
 
         <Row label="Requested" value={fmtDate(booking.createdAt)} />
 
-        {/* ✅ Conflicting pending bookings — only shown for pending bookings */}
         {booking.status?.toLowerCase() === "pending" && booking.conflictingBookings?.length > 0 && (
           <div className="conflict-warning">
             <strong>⚠️ {booking.conflictingBookings.length} conflicting pending booking{booking.conflictingBookings.length > 1 ? "s" : ""}:</strong>
@@ -123,17 +119,9 @@ function DetailModal({ bookingId, onClose, onApprove, onReject }) {
               return (
                 <div key={c.id} className="conflict-item">
                   <span className={`priority-badge priority-badge--${cp.cls}`}>{cp.icon} {cp.label}</span>
-                  <span style={{ marginLeft: 8, fontFamily: "monospace", fontSize: 12 }}>
-                    #{c.id} · {c.employeeName}
-                  </span>
-                  {c.notes && (
-                    <span style={{ marginLeft: 8, color: "#94A3B8", fontSize: 11, fontStyle: "italic" }}>
-                      "{c.notes}"
-                    </span>
-                  )}
-                  <span style={{ marginLeft: 8, fontSize: 11, color: "#CBD5E1" }}>
-                    Requested {fmtDate(c.createdAt)}
-                  </span>
+                  <span style={{ marginLeft: 8, fontFamily: "monospace", fontSize: 12 }}>#{c.id} · {c.employeeName}</span>
+                  {c.notes && <span style={{ marginLeft: 8, color: "#94A3B8", fontSize: 11, fontStyle: "italic" }}>"{c.notes}"</span>}
+                  <span style={{ marginLeft: 8, fontSize: 11, color: "#CBD5E1" }}>Requested {fmtDate(c.createdAt)}</span>
                 </div>
               );
             })}
@@ -181,50 +169,16 @@ function ApproveModal({ booking, onClose, onDone }) {
           <button className="modal__close" onClick={onClose}>✕</button>
         </div>
         <p className="modal__subtitle">Confirm booking approval</p>
-
-        {alert.msg && (
-          <div className={`form-alert form-alert--${alert.type}`}>
-            {alert.type === "error" ? "✕" : "✓"} {alert.msg}
-          </div>
-        )}
-
-        <div className="booking-detail-row">
-          <span className="booking-detail-row__label">Employee</span>
-          <span className="booking-detail-row__value">{booking.employeeName || "—"}</span>
-        </div>
-        <div className="booking-detail-row">
-          <span className="booking-detail-row__label">Room</span>
-          <span className="booking-detail-row__value">{booking.roomName || "—"}</span>
-        </div>
-        <div className="booking-detail-row">
-          <span className="booking-detail-row__label">Date</span>
-          <span className="booking-detail-row__value">
-            {fmtDate(booking.startTime)} · {fmtTime(booking.startTime)} – {fmtTime(booking.endTime)}
-          </span>
-        </div>
-        <div className="booking-detail-row">
-          <span className="booking-detail-row__label">Priority</span>
-          <span className="booking-detail-row__value">
-            {(() => { const pm = priorityMeta(booking.priority); return `${pm.icon} ${pm.label}`; })()}
-          </span>
-        </div>
-
-        {booking.notes && (
-          <div className="booking-detail-row">
-            <span className="booking-detail-row__label">Notes</span>
-            <span className="booking-detail-row__value">{booking.notes}</span>
-          </div>
-        )}
-
-        <p style={{ fontSize: 12, color: "#64748B", fontFamily: "monospace", margin: "12px 0 4px" }}>
-          Any other pending bookings for this slot will be auto-rejected.
-        </p>
-
+        {alert.msg && <div className={`form-alert form-alert--${alert.type}`}>{alert.type === "error" ? "✕" : "✓"} {alert.msg}</div>}
+        <div className="booking-detail-row"><span className="booking-detail-row__label">Employee</span><span className="booking-detail-row__value">{booking.employeeName || "—"}</span></div>
+        <div className="booking-detail-row"><span className="booking-detail-row__label">Room</span><span className="booking-detail-row__value">{booking.roomName || "—"}</span></div>
+        <div className="booking-detail-row"><span className="booking-detail-row__label">Date</span><span className="booking-detail-row__value">{fmtDate(booking.startTime)} · {fmtTime(booking.startTime)} – {fmtTime(booking.endTime)}</span></div>
+        <div className="booking-detail-row"><span className="booking-detail-row__label">Priority</span><span className="booking-detail-row__value">{(() => { const pm = priorityMeta(booking.priority); return `${pm.icon} ${pm.label}`; })()}</span></div>
+        {booking.notes && <div className="booking-detail-row"><span className="booking-detail-row__label">Notes</span><span className="booking-detail-row__value">{booking.notes}</span></div>}
+        <p style={{ fontSize: 12, color: "#64748B", fontFamily: "monospace", margin: "12px 0 4px" }}>Any other pending bookings for this slot will be auto-rejected.</p>
         <div className="modal__footer">
           <button className="btn-cancel"          onClick={onClose} disabled={loading}>Cancel</button>
-          <button className="btn-approve-confirm" onClick={handle}  disabled={loading}>
-            {loading ? "Approving..." : "✅ Yes, Approve"}
-          </button>
+          <button className="btn-approve-confirm" onClick={handle}  disabled={loading}>{loading ? "Approving..." : "✅ Yes, Approve"}</button>
         </div>
       </div>
     </div>
@@ -260,53 +214,17 @@ function RejectModal({ booking, onClose, onDone }) {
           <button className="modal__close" onClick={onClose}>✕</button>
         </div>
         <p className="modal__subtitle">Provide a reason for rejection (shown to employee)</p>
-
-        {alert.msg && (
-          <div className={`form-alert form-alert--${alert.type}`}>
-            {alert.type === "error" ? "✕" : "✓"} {alert.msg}
-          </div>
-        )}
-
-        <div className="booking-detail-row">
-          <span className="booking-detail-row__label">Employee</span>
-          <span className="booking-detail-row__value">{booking.employeeName || "—"}</span>
-        </div>
-        <div className="booking-detail-row">
-          <span className="booking-detail-row__label">Priority</span>
-          <span className="booking-detail-row__value">
-            {(() => { const pm = priorityMeta(booking.priority); return `${pm.icon} ${pm.label}`; })()}
-          </span>
-        </div>
-        <div className="booking-detail-row" style={{ marginBottom: 16 }}>
-          <span className="booking-detail-row__label">Room · Date</span>
-          <span className="booking-detail-row__value">
-            {booking.roomName || "—"} · {fmtDate(booking.startTime)}
-          </span>
-        </div>
-
-        {booking.notes && (
-          <div className="booking-detail-row" style={{ marginBottom: 16 }}>
-            <span className="booking-detail-row__label">Employee Notes</span>
-            <span className="booking-detail-row__value" style={{ fontStyle: "italic" }}>"{booking.notes}"</span>
-          </div>
-        )}
-
+        {alert.msg && <div className={`form-alert form-alert--${alert.type}`}>{alert.type === "error" ? "✕" : "✓"} {alert.msg}</div>}
+        <div className="booking-detail-row"><span className="booking-detail-row__label">Employee</span><span className="booking-detail-row__value">{booking.employeeName || "—"}</span></div>
+        <div className="booking-detail-row"><span className="booking-detail-row__label">Priority</span><span className="booking-detail-row__value">{(() => { const pm = priorityMeta(booking.priority); return `${pm.icon} ${pm.label}`; })()}</span></div>
+        <div className="booking-detail-row" style={{ marginBottom: 16 }}><span className="booking-detail-row__label">Room · Date</span><span className="booking-detail-row__value">{booking.roomName || "—"} · {fmtDate(booking.startTime)}</span></div>
+        {booking.notes && <div className="booking-detail-row" style={{ marginBottom: 16 }}><span className="booking-detail-row__label">Employee Notes</span><span className="booking-detail-row__value" style={{ fontStyle: "italic" }}>"{booking.notes}"</span></div>}
         <label className="form-label" htmlFor="reject-reason">Rejection Reason *</label>
-        <textarea
-          id="reject-reason"
-          className="reject-reason"
-          placeholder="e.g. Room is under maintenance, please rebook for another slot."
-          value={reason}
-          maxLength={MAX}
-          onChange={(e) => setReason(e.target.value)}
-        />
+        <textarea id="reject-reason" className="reject-reason" placeholder="e.g. Room is under maintenance, please rebook for another slot." value={reason} maxLength={MAX} onChange={(e) => setReason(e.target.value)} />
         <div className="reject-char-count">{reason.length} / {MAX}</div>
-
         <div className="modal__footer">
           <button className="btn-cancel"         onClick={onClose} disabled={loading}>Cancel</button>
-          <button className="btn-reject-confirm" onClick={handle}  disabled={loading}>
-            {loading ? "Rejecting..." : "❌ Confirm Reject"}
-          </button>
+          <button className="btn-reject-confirm" onClick={handle}  disabled={loading}>{loading ? "Rejecting..." : "❌ Confirm Reject"}</button>
         </div>
       </div>
     </div>
@@ -322,7 +240,6 @@ function BookingRow({ booking, onView, onApprove, onReject, actionLoading }) {
 
   return (
     <tr>
-      {/* Employee */}
       <td>
         <div className="bt-employee">
           <div className="bt-employee__avatar">{initials(booking.employeeName || "?")}</div>
@@ -332,52 +249,32 @@ function BookingRow({ booking, onView, onApprove, onReject, actionLoading }) {
           </div>
         </div>
       </td>
-
-      {/* Room / Branch */}
       <td>
         <div className="bt-room">{booking.roomName || "—"}</div>
         <div className="bt-branch">{booking.branchName || ""}</div>
       </td>
-
-      {/* Date / Time */}
       <td>
         <div className="bt-date">{fmtDate(booking.startTime)}</div>
         <div className="bt-time">{fmtTime(booking.startTime)} – {fmtTime(booking.endTime)}</div>
       </td>
-
-      {/* Priority */}
       <td>
-        <span className={`priority-badge priority-badge--${pm.cls}`}>
-          {pm.icon} {pm.label}
-        </span>
+        <span className={`priority-badge priority-badge--${pm.cls}`}>{pm.icon} {pm.label}</span>
       </td>
-
-      {/* Employee notes */}
       <td style={{ maxWidth: 140 }}>
         <span style={{ fontSize: 12, color: "#64748B", fontFamily: "monospace" }}>
           {booking.notes || <span style={{ color: "#CBD5E1" }}>—</span>}
         </span>
       </td>
-
-      {/* Status */}
       <td>
         <span className={`b-status b-status--${sm.cls}`}>{sm.icon} {sm.label}</span>
       </td>
-
-      {/* Actions */}
       <td>
         <div className="bt-actions">
-          <button className="bt-btn bt-btn--view" onClick={() => onView(booking.id)}>
-            👁 View
-          </button>
+          <button className="bt-btn bt-btn--view" onClick={() => onView(booking.id)}>👁 View</button>
           {isPending && (
             <>
-              <button className="bt-btn bt-btn--approve" onClick={() => onApprove(booking)} disabled={busy}>
-                {busy ? "..." : "✅"}
-              </button>
-              <button className="bt-btn bt-btn--reject"  onClick={() => onReject(booking)}  disabled={busy}>
-                {busy ? "..." : "❌"}
-              </button>
+              <button className="bt-btn bt-btn--approve" onClick={() => onApprove(booking)} disabled={busy}>{busy ? "..." : "✅"}</button>
+              <button className="bt-btn bt-btn--reject"  onClick={() => onReject(booking)}  disabled={busy}>{busy ? "..." : "❌"}</button>
             </>
           )}
         </div>
@@ -390,22 +287,21 @@ function BookingRow({ booking, onView, onApprove, onReject, actionLoading }) {
 const PAGE_SIZE = 10;
 
 export default function AdminBookings() {
-  const [bookings,      setBookings]      = useState([]);
-  const [filtered,      setFiltered]      = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [refreshing,    setRefreshing]    = useState(false);
-  const [error,         setError]         = useState("");
-  const [search,        setSearch]        = useState("");
-  const [statusFilter,  setStatusFilter]  = useState("all");
-  const [priorityFilter,setPriorityFilter]= useState("all");
-  const [dateFrom,      setDateFrom]      = useState("");
-  const [dateTo,        setDateTo]        = useState("");
-  const [sortBy,        setSortBy]        = useState("pending-first");
-  const [page,          setPage]          = useState(1);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [modal,         setModal]         = useState(null);
+  const [bookings,       setBookings]       = useState([]);
+  const [filtered,       setFiltered]       = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [refreshing,     setRefreshing]     = useState(false);
+  const [error,          setError]          = useState("");
+  const [search,         setSearch]         = useState("");
+  const [statusFilter,   setStatusFilter]   = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [dateFrom,       setDateFrom]       = useState("");
+  const [dateTo,         setDateTo]         = useState("");
+  const [sortBy,         setSortBy]         = useState("pending-first");
+  const [page,           setPage]           = useState(1);
+  const [actionLoading,  setActionLoading]  = useState(null);
+  const [modal,          setModal]          = useState(null);
 
-  // ── Fetch ─────────────────────────────────────────────────────
   const fetchBookings = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true); else setLoading(true);
     setError("");
@@ -421,22 +317,12 @@ export default function AdminBookings() {
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
-  // ── Filter + sort ─────────────────────────────────────────────
   useEffect(() => {
     let list = [...bookings];
-
-    if (statusFilter !== "all")
-      list = list.filter((b) => b.status?.toLowerCase() === statusFilter);
-
-    if (priorityFilter !== "all")
-      list = list.filter((b) => b.priority?.toLowerCase() === priorityFilter);
-
-    if (dateFrom)
-      list = list.filter((b) => b.startTime && new Date(b.startTime) >= new Date(dateFrom));
-
-    if (dateTo)
-      list = list.filter((b) => b.startTime && new Date(b.startTime) <= new Date(dateTo + "T23:59:59"));
-
+    if (statusFilter !== "all")   list = list.filter((b) => b.status?.toLowerCase()   === statusFilter);
+    if (priorityFilter !== "all") list = list.filter((b) => b.priority?.toLowerCase() === priorityFilter);
+    if (dateFrom) list = list.filter((b) => b.startTime && new Date(b.startTime) >= new Date(dateFrom));
+    if (dateTo)   list = list.filter((b) => b.startTime && new Date(b.startTime) <= new Date(dateTo + "T23:59:59"));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((b) =>
@@ -446,34 +332,28 @@ export default function AdminBookings() {
         b.branchName?.toLowerCase().includes(q)    ||
         b.notes?.toLowerCase().includes(q));
     }
-
     list.sort((a, b) => {
       if (sortBy === "pending-first") {
         const pa = a.status?.toLowerCase() === "pending" ? 0 : 1;
         const pb = b.status?.toLowerCase() === "pending" ? 0 : 1;
         if (pa !== pb) return pa - pb;
-        // Within pending: high priority first
-        const priorityOrder = { high: 0, medium: 1, low: 2 };
-        const ppa = priorityOrder[a.priority?.toLowerCase()] ?? 2;
-        const ppb = priorityOrder[b.priority?.toLowerCase()] ?? 2;
+        const po = { high: 0, medium: 1, low: 2 };
+        const ppa = po[a.priority?.toLowerCase()] ?? 2;
+        const ppb = po[b.priority?.toLowerCase()] ?? 2;
         if (ppa !== ppb) return ppa - ppb;
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       }
-      if (sortBy === "priority-high")
-        return (["high","medium","low"].indexOf(a.priority?.toLowerCase() || "low")) -
-               (["high","medium","low"].indexOf(b.priority?.toLowerCase() || "low"));
+      if (sortBy === "priority-high") return (["high","medium","low"].indexOf(a.priority?.toLowerCase() || "low")) - (["high","medium","low"].indexOf(b.priority?.toLowerCase() || "low"));
       if (sortBy === "newest") return new Date(b.startTime || 0) - new Date(a.startTime || 0);
       if (sortBy === "oldest") return new Date(a.startTime || 0) - new Date(b.startTime || 0);
       if (sortBy === "name")   return (a.employeeName || "").localeCompare(b.employeeName || "");
       return 0;
     });
-
     setFiltered(list);
     setPage(1);
   }, [search, statusFilter, priorityFilter, dateFrom, dateTo, sortBy, bookings]);
 
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
   const counts = {
     all:       bookings.length,
     pending:   bookings.filter((b) => b.status?.toLowerCase() === "pending").length,
@@ -488,11 +368,8 @@ export default function AdminBookings() {
   const closeModal    = ()        => setModal(null);
   const handleDone    = ()        => { closeModal(); fetchBookings(true); };
 
-  const clearFilters = () => {
-    setSearch(""); setStatusFilter("all"); setPriorityFilter("all");
-    setDateFrom(""); setDateTo(""); setSortBy("pending-first");
-  };
-  const hasFilters = search || statusFilter !== "all" || priorityFilter !== "all" || dateFrom || dateTo;
+  const clearFilters = () => { setSearch(""); setStatusFilter("all"); setPriorityFilter("all"); setDateFrom(""); setDateTo(""); setSortBy("pending-first"); };
+  const hasFilters   = search || statusFilter !== "all" || priorityFilter !== "all" || dateFrom || dateTo;
 
   const STATS = [
     { key: "all",       label: "All Bookings", icon: "📋", iconCls: "all"       },
@@ -511,11 +388,7 @@ export default function AdminBookings() {
           <h2 className="bookings-page__title">📋 Bookings</h2>
           <p className="bookings-page__sub">Review, approve and reject booking requests</p>
         </div>
-        <button
-          className={`btn-refresh${refreshing ? " spinning" : ""}`}
-          onClick={() => fetchBookings(true)}
-          disabled={refreshing}
-        >
+        <button className={`btn-refresh${refreshing ? " spinning" : ""}`} onClick={() => fetchBookings(true)} disabled={refreshing}>
           <span>🔄</span> {refreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
@@ -523,16 +396,10 @@ export default function AdminBookings() {
       {/* ── Stat cards ── */}
       <div className="bookings-stats">
         {STATS.map((s) => (
-          <div
-            key={s.key}
-            className={`booking-stat${statusFilter === s.key ? " booking-stat--active" : ""}`}
-            onClick={() => setStatusFilter(s.key)}
-          >
+          <div key={s.key} className={`booking-stat${statusFilter === s.key ? " booking-stat--active" : ""}`} onClick={() => setStatusFilter(s.key)}>
             <div className={`booking-stat__icon booking-stat__icon--${s.iconCls}`}>{s.icon}</div>
             <div>
-              <div className={`booking-stat__value booking-stat__value--${s.iconCls}`}>
-                {loading ? "—" : counts[s.key]}
-              </div>
+              <div className={`booking-stat__value booking-stat__value--${s.iconCls}`}>{loading ? "—" : counts[s.key]}</div>
               <div className="booking-stat__label">{s.label}</div>
             </div>
           </div>
@@ -541,6 +408,8 @@ export default function AdminBookings() {
 
       {/* ── Toolbar ── */}
       <div className="bookings-toolbar">
+
+        {/* Search */}
         <div className="bookings-search">
           <span className="bookings-search__icon">🔍</span>
           <input
@@ -551,8 +420,8 @@ export default function AdminBookings() {
           />
         </div>
 
-        <select className="bookings-filter-select" value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}>
+        {/* Status — grey border (default) */}
+        <select className="bookings-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">All Statuses</option>
           <option value="pending">⏳ Pending</option>
           <option value="approved">✅ Approved</option>
@@ -560,22 +429,42 @@ export default function AdminBookings() {
           <option value="cancelled">🚫 Cancelled</option>
         </select>
 
-        {/* ✅ Priority filter */}
-        <select className="bookings-filter-select" value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}>
+        {/* Priority — mild teal border + teal chevron */}
+        <select
+          className="bookings-filter-select bookings-priority-select"
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+        >
           <option value="all">All Priorities</option>
           <option value="high">🔴 High</option>
           <option value="medium">🟡 Medium</option>
           <option value="low">🟢 Low</option>
         </select>
 
-        <input type="date" className="bookings-filter-select bookings-date-input"
-          value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} title="From date" />
-        <input type="date" className="bookings-filter-select bookings-date-input"
-          value={dateTo} onChange={(e) => setDateTo(e.target.value)} title="To date" />
+        {/* Date from */}
+        <input
+          type="date"
+          className="bookings-filter-select bookings-date-input"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          title="From date"
+        />
 
-        <select className="bookings-filter-select" value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}>
+        {/* Date to */}
+        <input
+          type="date"
+          className="bookings-filter-select bookings-date-input"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          title="To date"
+        />
+
+        {/* Sort — light blue border + blue chevron */}
+        <select
+          className="bookings-filter-select bookings-sort-select"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
           <option value="pending-first">Sort: Pending + High Priority First</option>
           <option value="priority-high">Sort: Priority High → Low</option>
           <option value="newest">Sort: Date Newest</option>
@@ -588,9 +477,11 @@ export default function AdminBookings() {
             ✕ Clear
           </button>
         )}
+
         <span className="bookings-count-badge">
           {filtered.length} {filtered.length === 1 ? "booking" : "bookings"}
         </span>
+
       </div>
 
       {error && <div className="form-alert form-alert--error">⚠ {error}</div>}
@@ -598,43 +489,25 @@ export default function AdminBookings() {
       {/* ── Table ── */}
       <div className="bookings-panel">
         {loading ? (
-          <div className="bookings-loading">
-            <div className="bookings-spinner" /><p>Loading bookings...</p>
-          </div>
+          <div className="bookings-loading"><div className="bookings-spinner" /><p>Loading bookings...</p></div>
         ) : filtered.length === 0 ? (
           <div className="bookings-empty">
             <div className="bookings-empty__icon">📋</div>
-            <div className="bookings-empty__title">
-              {hasFilters ? "No bookings match your filters" : "No bookings yet"}
-            </div>
-            <div className="bookings-empty__sub">
-              {hasFilters ? "Try clearing your filters" : "Bookings will appear here once employees start booking rooms"}
-            </div>
+            <div className="bookings-empty__title">{hasFilters ? "No bookings match your filters" : "No bookings yet"}</div>
+            <div className="bookings-empty__sub">{hasFilters ? "Try clearing your filters" : "Bookings will appear here once employees start booking rooms"}</div>
           </div>
         ) : (
           <div className="bookings-table-wrap">
             <table className="bookings-table">
               <thead>
                 <tr>
-                  <th>Employee</th>
-                  <th>Room</th>
-                  <th>Date / Time</th>
-                  <th>Priority</th>
-                  <th>Notes</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>Employee</th><th>Room</th><th>Date / Time</th>
+                  <th>Priority</th><th>Notes</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.map((b) => (
-                  <BookingRow
-                    key={b.id}
-                    booking={b}
-                    onView={handleView}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                    actionLoading={actionLoading}
-                  />
+                  <BookingRow key={b.id} booking={b} onView={handleView} onApprove={handleApprove} onReject={handleReject} actionLoading={actionLoading} />
                 ))}
               </tbody>
             </table>
@@ -644,20 +517,9 @@ export default function AdminBookings() {
       </div>
 
       {/* ── Modals ── */}
-      {modal?.type === "view" && (
-        <DetailModal
-          bookingId={modal.bookingId}
-          onClose={closeModal}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
-      )}
-      {modal?.type === "approve" && (
-        <ApproveModal booking={modal.booking} onClose={closeModal} onDone={handleDone} />
-      )}
-      {modal?.type === "reject" && (
-        <RejectModal booking={modal.booking} onClose={closeModal} onDone={handleDone} />
-      )}
+      {modal?.type === "view"    && <DetailModal  bookingId={modal.bookingId} onClose={closeModal} onApprove={handleApprove} onReject={handleReject} />}
+      {modal?.type === "approve" && <ApproveModal booking={modal.booking}    onClose={closeModal} onDone={handleDone} />}
+      {modal?.type === "reject"  && <RejectModal  booking={modal.booking}    onClose={closeModal} onDone={handleDone} />}
 
     </div>
   );
