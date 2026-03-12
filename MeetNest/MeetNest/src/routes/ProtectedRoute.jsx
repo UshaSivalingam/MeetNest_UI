@@ -1,32 +1,23 @@
 // src/routes/ProtectedRoute.jsx
-
 import { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ children, role, onRedirect }) {
-  const { isLoggedIn, isAdmin, isEmployee, loading } = useAuth();
+  const { isLoggedIn, isAdmin, isEmployee, loading, user } = useAuth();
 
-  const denied =
-    !loading &&
-    (
-      !isLoggedIn ||
-      (role === "admin" && !isAdmin) ||
-      (role === "employee" && !isEmployee)
-    );
+  const resolved = !loading && user !== undefined;
+  const denied   = resolved && !isLoggedIn;
 
   useEffect(() => {
-    if (denied) {
-      onRedirect?.();
-    }
-  }, [denied, onRedirect]);
+    if (denied) onRedirect?.();
+  }, [denied]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <LoadingScreen />;
-
-  if (denied) return null;
+  if (!resolved) return <LoadingScreen />;
+  if (denied)    return null;
 
   return children;
 }
-// ─── LOADING SCREEN ───────────────────────────────────────────────
+
 function LoadingScreen() {
   return (
     <div style={{

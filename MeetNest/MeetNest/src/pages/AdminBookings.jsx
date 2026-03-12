@@ -5,13 +5,6 @@ import { AdminAPI } from "../api/adminAPI";
 import Pagination from "../components/Pagination";
 import "../styles/AdminBookings.css";
 
-if (typeof document !== "undefined" && !document.getElementById("adm-fonts")) {
-  const l = document.createElement("link");
-  l.id = "adm-fonts"; l.rel = "stylesheet";
-  l.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&display=swap";
-  document.head.appendChild(l);
-}
-
 // ─── HELPERS ─────────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -36,12 +29,59 @@ function statusMeta(raw = "") {
 }
 
 const PRIORITY_META = {
-  high:   { label: "High",   icon: "🔴", cls: "high"   },
+  high:   { label: "High",   icon: "🟠", cls: "high"   },
   medium: { label: "Medium", icon: "🟡", cls: "medium" },
   low:    { label: "Low",    icon: "🟢", cls: "low"    },
 };
 function priorityMeta(raw = "") {
   return PRIORITY_META[raw.toLowerCase()] || PRIORITY_META.low;
+}
+
+// ─── BOOKING ICON (SVG — mirrors RoomIcon pattern) ────────────────
+function BookingIcon({ size = 22, color = "#2563EB" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="4" width="18" height="17" rx="2" fill={color} fillOpacity="0.12" stroke={color} strokeWidth="1.6"/>
+      <path d="M3 9h18" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
+      <path d="M8 2v3M16 2v3" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
+      <circle cx="8"  cy="14" r="1.2" fill={color}/>
+      <circle cx="12" cy="14" r="1.2" fill={color}/>
+      <circle cx="16" cy="14" r="1.2" fill={color}/>
+    </svg>
+  );
+}
+
+// ─── STAT CARD — exact same component shape as RoomManagement ─────
+function StatCard({ value, label, icon, color, border, onClick, active }) {
+  return (
+    <div className="bookings-stat-card"
+      style={{
+        borderColor: active ? color : border,
+        background:  active ? `${color}0f` : "#ffffff",
+        cursor:      onClick ? "pointer" : "default",
+        outline:     active ? `2px solid ${color}40` : "2px solid transparent",
+        userSelect:  "none",
+      }}
+      onClick={onClick}>
+
+      <div className="bookings-stat-card__glow" style={{ background: color }} />
+
+      <div className="bookings-stat-card__icon" style={{ background: `${color}1a`, color }}>
+        {icon}
+      </div>
+
+      <div className="bookings-stat-card__info">
+        <div className="bookings-stat-card__value" style={{ color }}>{value}</div>
+        <div className="bookings-stat-card__label">{label}</div>
+      </div>
+
+      {onClick && (
+        <div className="bookings-stat-card__hint" style={{ color: active ? color : "#CBD5E1" }}>
+          {active ? "✓ active" : "click to filter"}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── DETAIL MODAL ─────────────────────────────────────────────────
@@ -82,7 +122,10 @@ function DetailModal({ bookingId, onClose, onApprove, onReject }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal__header">
-          <h2 className="modal__title">📋 Booking Detail</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="modal__booking-icon-wrap"><BookingIcon size={20} color="#2563EB" /></div>
+            <h2 className="modal__title">Booking Detail</h2>
+          </div>
           <button className="modal__close" onClick={onClose}>✕</button>
         </div>
         <p className="modal__subtitle">
@@ -296,7 +339,6 @@ export default function AdminBookings() {
   const [statusFilter,   setStatusFilter]   = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [dateFrom,       setDateFrom]       = useState("");
-  const [dateTo,         setDateTo]         = useState("");
   const [sortBy,         setSortBy]         = useState("pending-first");
   const [page,           setPage]           = useState(1);
   const [actionLoading,  setActionLoading]  = useState(null);
@@ -322,7 +364,6 @@ export default function AdminBookings() {
     if (statusFilter !== "all")   list = list.filter((b) => b.status?.toLowerCase()   === statusFilter);
     if (priorityFilter !== "all") list = list.filter((b) => b.priority?.toLowerCase() === priorityFilter);
     if (dateFrom) list = list.filter((b) => b.startTime && new Date(b.startTime) >= new Date(dateFrom));
-    if (dateTo)   list = list.filter((b) => b.startTime && new Date(b.startTime) <= new Date(dateTo + "T23:59:59"));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((b) =>
@@ -351,7 +392,7 @@ export default function AdminBookings() {
     });
     setFiltered(list);
     setPage(1);
-  }, [search, statusFilter, priorityFilter, dateFrom, dateTo, sortBy, bookings]);
+  }, [search, statusFilter, priorityFilter, dateFrom, sortBy, bookings]);
 
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const counts = {
@@ -368,16 +409,11 @@ export default function AdminBookings() {
   const closeModal    = ()        => setModal(null);
   const handleDone    = ()        => { closeModal(); fetchBookings(true); };
 
-  const clearFilters = () => { setSearch(""); setStatusFilter("all"); setPriorityFilter("all"); setDateFrom(""); setDateTo(""); setSortBy("pending-first"); };
-  const hasFilters   = search || statusFilter !== "all" || priorityFilter !== "all" || dateFrom || dateTo;
+  const hasFilters = search || statusFilter !== "all" || priorityFilter !== "all" || dateFrom;
+  const clearAll   = () => { setSearch(""); setStatusFilter("all"); setPriorityFilter("all"); setDateFrom(""); setSortBy("pending-first"); };
 
-  const STATS = [
-    { key: "all",       label: "All Bookings", icon: "📋", iconCls: "all"       },
-    { key: "pending",   label: "Pending",      icon: "⏳", iconCls: "pending"   },
-    { key: "approved",  label: "Approved",     icon: "✅", iconCls: "approved"  },
-    { key: "rejected",  label: "Rejected",     icon: "❌", iconCls: "rejected"  },
-    { key: "cancelled", label: "Cancelled",    icon: "🚫", iconCls: "cancelled" },
-  ];
+  const handleStatusStatClick = (key) =>
+    setStatusFilter((prev) => prev === key ? "all" : key);
 
   return (
     <div className="bookings-page">
@@ -385,7 +421,10 @@ export default function AdminBookings() {
       {/* ── Header ── */}
       <div className="bookings-page__header">
         <div>
-          <h2 className="bookings-page__title">📋 Bookings</h2>
+          <h2 className="bookings-page__title">
+            <span className="bookings-page__title-icon"><BookingIcon size={26} color="#2563EB" /></span>
+            Bookings
+          </h2>
           <p className="bookings-page__sub">Review, approve and reject booking requests</p>
         </div>
         <button className={`btn-refresh${refreshing ? " spinning" : ""}`} onClick={() => fetchBookings(true)} disabled={refreshing}>
@@ -393,23 +432,43 @@ export default function AdminBookings() {
         </button>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="bookings-stats">
-        {STATS.map((s) => (
-          <div key={s.key} className={`booking-stat${statusFilter === s.key ? " booking-stat--active" : ""}`} onClick={() => setStatusFilter(s.key)}>
-            <div className={`booking-stat__icon booking-stat__icon--${s.iconCls}`}>{s.icon}</div>
-            <div>
-              <div className={`booking-stat__value booking-stat__value--${s.iconCls}`}>{loading ? "—" : counts[s.key]}</div>
-              <div className="booking-stat__label">{s.label}</div>
-            </div>
-          </div>
-        ))}
+      {/* ── Stat Cards ── */}
+      <div className="bookings-stats-grid">
+        <StatCard
+          value={loading ? "—" : counts.all} label="All Bookings"
+          icon={<BookingIcon size={20} color="#2563EB" />}
+          color="#2563EB" border="rgba(59,130,246,0.18)"
+          onClick={() => handleStatusStatClick("all")}
+          active={statusFilter === "all"}
+        />
+        <StatCard
+          value={loading ? "—" : counts.pending} label="Pending" icon="⏳"
+          color="#CA8A04" border="rgba(217,119,6,0.20)"
+          onClick={() => handleStatusStatClick("pending")}
+          active={statusFilter === "pending"}
+        />
+        <StatCard
+          value={loading ? "—" : counts.approved} label="Approved" icon="✅"
+          color="#065F46" border="rgba(22,163,74,0.20)"
+          onClick={() => handleStatusStatClick("approved")}
+          active={statusFilter === "approved"}
+        />
+        <StatCard
+          value={loading ? "—" : counts.rejected} label="Rejected" icon="❌"
+          color="#DC2626" border="rgba(220,38,38,0.18)"
+          onClick={() => handleStatusStatClick("rejected")}
+          active={statusFilter === "rejected"}
+        />
+        <StatCard
+          value={loading ? "—" : counts.cancelled} label="Cancelled" icon="🚫"
+          color="#64748B" border="rgba(148,163,184,0.18)"
+          onClick={() => handleStatusStatClick("cancelled")}
+          active={statusFilter === "cancelled"}
+        />
       </div>
 
       {/* ── Toolbar ── */}
       <div className="bookings-toolbar">
-
-        {/* Search */}
         <div className="bookings-search">
           <span className="bookings-search__icon">🔍</span>
           <input
@@ -418,70 +477,43 @@ export default function AdminBookings() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button className="bookings-search__clear" onClick={() => setSearch("")}>✕</button>
+          )}
         </div>
 
-        {/* Status — grey border (default) */}
-        <select className="bookings-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="all">All Statuses</option>
-          <option value="pending">⏳ Pending</option>
-          <option value="approved">✅ Approved</option>
-          <option value="rejected">❌ Rejected</option>
-          <option value="cancelled">🚫 Cancelled</option>
-        </select>
-
-        {/* Priority — mild teal border + teal chevron */}
-        <select
-          className="bookings-filter-select bookings-priority-select"
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-        >
+        <select className="bookings-filter-select" value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}>
           <option value="all">All Priorities</option>
           <option value="high">🔴 High</option>
           <option value="medium">🟡 Medium</option>
           <option value="low">🟢 Low</option>
         </select>
 
-        {/* Date from */}
         <input
           type="date"
           className="bookings-filter-select bookings-date-input"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          title="From date"
+          title="Filter from date"
         />
 
-        {/* Date to */}
-        <input
-          type="date"
-          className="bookings-filter-select bookings-date-input"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          title="To date"
-        />
-
-        {/* Sort — light blue border + blue chevron */}
-        <select
-          className="bookings-filter-select bookings-sort-select"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="pending-first">Sort: Pending + High Priority First</option>
-          <option value="priority-high">Sort: Priority High → Low</option>
+        <select className="bookings-filter-select" value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}>
           <option value="newest">Sort: Date Newest</option>
           <option value="oldest">Sort: Date Oldest</option>
+          <option value="pending-first">Sort: Pending + High Priority First</option>
+          <option value="priority-high">Sort: Priority High → Low</option>
           <option value="name">Sort: Employee A–Z</option>
         </select>
 
         {hasFilters && (
-          <button className="bookings-clear-btn" onClick={clearFilters} title="Clear all filters">
-            ✕ Clear
-          </button>
+          <button className="bookings-clear-btn" onClick={clearAll}>✕ Clear</button>
         )}
 
         <span className="bookings-count-badge">
           {filtered.length} {filtered.length === 1 ? "booking" : "bookings"}
         </span>
-
       </div>
 
       {error && <div className="form-alert form-alert--error">⚠ {error}</div>}
@@ -492,7 +524,7 @@ export default function AdminBookings() {
           <div className="bookings-loading"><div className="bookings-spinner" /><p>Loading bookings...</p></div>
         ) : filtered.length === 0 ? (
           <div className="bookings-empty">
-            <div className="bookings-empty__icon">📋</div>
+            <div className="bookings-empty__icon"><BookingIcon size={52} color="#CBD5E1" /></div>
             <div className="bookings-empty__title">{hasFilters ? "No bookings match your filters" : "No bookings yet"}</div>
             <div className="bookings-empty__sub">{hasFilters ? "Try clearing your filters" : "Bookings will appear here once employees start booking rooms"}</div>
           </div>

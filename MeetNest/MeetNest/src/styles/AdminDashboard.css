@@ -511,3 +511,19 @@
   .dash__stats { grid-template-columns: 1fr; }
   .quick-actions { grid-template-columns: 1fr; }
 }
+
+.dash__greeting {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  flex-wrap:       wrap;
+  gap:             12px;
+
+  /* ── ADD THESE ── */
+  background:      rgba(255, 255, 255, 0.88);
+  border-radius:   20px;
+  padding:         20px 24px;
+  border:          1.5px solid rgba(59, 130, 246, 0.12);
+  backdrop-filter: blur(12px);
+  box-shadow:      0 4px 24px rgba(59, 130, 246, 0.07);
+}

@@ -11,14 +11,6 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\eslint.config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:eslint.config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\src\\context\\AuthContext.jsx||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\context\\AuthContext.jsx||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
     },
@@ -80,30 +72,6 @@
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "eslint.config.js",
-              "DocumentMoniker": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\eslint.config.js",
-              "RelativeDocumentMoniker": "eslint.config.js",
-              "ToolTip": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\eslint.config.js",
-              "RelativeToolTip": "eslint.config.js",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2026-03-03T16:17:38.078Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": ".gitignore",
-              "DocumentMoniker": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\.gitignore",
-              "RelativeDocumentMoniker": ".gitignore",
-              "ToolTip": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\.gitignore",
-              "RelativeToolTip": ".gitignore",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2026-03-03T16:17:30.312Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
               "Title": "AuthContext.jsx",
               "DocumentMoniker": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\src\\context\\AuthContext.jsx",
               "RelativeDocumentMoniker": "src\\context\\AuthContext.jsx",
@@ -115,7 +83,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 3,
               "Title": "adminAPI.js",
               "DocumentMoniker": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\src\\api\\adminAPI.js",
               "RelativeDocumentMoniker": "src\\api\\adminAPI.js",
@@ -127,7 +95,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 4,
               "Title": "vite.svg",
               "DocumentMoniker": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\public\\vite.svg",
               "RelativeDocumentMoniker": "public\\vite.svg",
@@ -139,7 +107,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 5,
               "Title": "BrowseRooms.jsx",
               "DocumentMoniker": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\src\\pages\\BrowseRooms.jsx",
               "RelativeDocumentMoniker": "src\\pages\\BrowseRooms.jsx",
@@ -151,7 +119,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 6,
               "Title": "ProtectedRoute.jsx",
               "DocumentMoniker": "D:\\Meet_Nest_UI\\MeetNest\\MeetNest\\src\\routes\\ProtectedRoute.jsx",
               "RelativeDocumentMoniker": "src\\routes\\ProtectedRoute.jsx",

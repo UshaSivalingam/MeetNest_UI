@@ -1,21 +1,30 @@
 // src/pages/RoomManagement.jsx
+// ── REPLACE your existing file entirely ──
+// Changes from previous version:
+//   1. DeleteModal: checks active bookings BEFORE showing delete confirmation
+//   2. Shows ProtectedRoomModal when room has active bookings
+//   3. Admin can set a reminder from the protected-room modal
+//   4. RoomAPI.getActiveBookings() + NotificationAPI.createReminder() used
+
 import { useState, useEffect, useCallback, useRef } from "react";
-import { RoomAPI } from "../api/roomAPI";
-import { BranchAPI } from "../api/branchAPI";
-import { FacilityAPI } from "../api/facilityAPI";
-import { RoomFacilityAPI } from "../api/RoomFacilityAPI";
-import Pagination from "../components/Pagination";
+import { RoomAPI }          from "../api/roomAPI";
+import { BranchAPI }        from "../api/branchAPI";
+import { FacilityAPI }      from "../api/facilityAPI";
+import { RoomFacilityAPI }  from "../api/RoomFacilityAPI";
+import { NotificationAPI }  from "../api/notificationAPI";
+import Pagination           from "../components/Pagination";
+import NotificationBell     from "../components/NotificationBell";
 import "../styles/RoomManagement.css";
 
+// ─── CONSTANTS ────────────────────────────────────────────────────
 const BANNER_COLORS = ["green","blue","yellow","sky","purple","red"];
-const EMPTY_FORM = { name:"", branchId:"", capacity:"", description:"", approvalRequired: true };
+const EMPTY_FORM    = { name:"", branchId:"", capacity:"", description:"", approvalRequired: true, underMaintenance: false };
 function bannerFor(i) { return BANNER_COLORS[i % BANNER_COLORS.length]; }
 
-// ─── SVG ROOM ICON ───────────────────────────────────────────────
+// ─── ICONS ────────────────────────────────────────────────────────
 function RoomIcon({ size = 22, color = "#16A34A" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="7" width="20" height="14" rx="2" fill={color} fillOpacity="0.12" stroke={color} strokeWidth="1.6"/>
       <path d="M7 21V17a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v4" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
       <path d="M2 11l10-6 10 6" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -24,7 +33,7 @@ function RoomIcon({ size = 22, color = "#16A34A" }) {
   );
 }
 
-// ─── APPROVAL PILL TOGGLE ────────────────────────────────────────
+// ─── APPROVAL TOGGLE ──────────────────────────────────────────────
 function ApprovalToggle({ value, onChange }) {
   return (
     <div className="apt-wrap">
@@ -52,8 +61,7 @@ function ApprovalToggle({ value, onChange }) {
   );
 }
 
-// ─── BRANCH DROPDOWN ─────────────────────────────────────────────
-// Uses position:fixed for its menu so it's NEVER clipped by modal overflow-y:auto
+// ─── BRANCH DROPDOWN ──────────────────────────────────────────────
 function BranchDropdown({ branches, value, onChange }) {
   const [open,      setOpen]      = useState(false);
   const [menuStyle, setMenuStyle] = useState({});
@@ -65,16 +73,11 @@ function BranchDropdown({ branches, value, onChange }) {
   const openMenu = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setMenuStyle({
-        top:   rect.bottom + 6,
-        left:  rect.left,
-        width: rect.width,
-      });
+      setMenuStyle({ top: rect.bottom + 6, left: rect.left, width: rect.width });
     }
     setOpen(true);
   };
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -89,31 +92,25 @@ function BranchDropdown({ branches, value, onChange }) {
 
   return (
     <div className="branch-dropdown">
-      <button
-        type="button"
-        ref={triggerRef}
+      <button type="button" ref={triggerRef}
         className={`branch-dropdown__trigger${open ? " branch-dropdown__trigger--open" : ""}`}
-        onClick={() => open ? setOpen(false) : openMenu()}
-      >
+        onClick={() => open ? setOpen(false) : openMenu()}>
         {selected
           ? <span style={{ color:"#1e3a5f" }}>{selected.name}</span>
           : <span className="branch-dropdown__placeholder">— Select Branch —</span>
         }
         <span className="branch-dropdown__arrow">▼</span>
       </button>
-
       {open && (
         <div ref={menuRef} className="branch-dropdown__menu" style={{ ...menuStyle, position:"fixed" }}>
           {branches.length === 0
-            ? <div style={{ padding:"12px 14px", fontSize:12, color:"#94A3B8",
-                fontFamily:"monospace", textAlign:"center" }}>No branches found</div>
+            ? <div style={{ padding:"12px 14px", fontSize:12, color:"#94A3B8", fontFamily:"monospace", textAlign:"center" }}>No branches found</div>
             : branches.map((b) => {
                 const isSel = String(b.id) === String(value);
                 return (
                   <div key={b.id}
                     className={`branch-dropdown__item${isSel ? " branch-dropdown__item--selected" : ""}`}
-                    onMouseDown={(e) => { e.preventDefault(); onChange(b.id); setOpen(false); }}
-                  >
+                    onMouseDown={(e) => { e.preventDefault(); onChange(b.id); setOpen(false); }}>
                     <span className="branch-dropdown__item__check">{isSel ? "✓" : ""}</span>
                     <span>{b.name}</span>
                   </div>
@@ -126,8 +123,8 @@ function BranchDropdown({ branches, value, onChange }) {
   );
 }
 
-// ─── ROOM FORM MODAL ─────────────────────────────────────────────
-function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
+// ─── ROOM MODAL (create / edit) ───────────────────────────────────
+function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onShowProtected }) {
   const isEdit = mode === "edit";
 
   const [form, setForm] = useState(isEdit ? {
@@ -136,22 +133,37 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
     capacity:         room.capacity         || "",
     description:      room.description      || "",
     approvalRequired: room.approvalRequired ?? true,
+    underMaintenance: room.underMaintenance ?? false,
   } : { ...EMPTY_FORM });
 
   const [selectedFacIds, setSelectedFacIds] = useState(
     isEdit ? (room.facilities ?? []).map((f) => f.id) : []
   );
   const [facDropOpen, setFacDropOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [alert,   setAlert]   = useState({ msg:"", type:"" });
+  const [loading,     setLoading]     = useState(false);
+  const [alert,       setAlert]       = useState({ msg:"", type:"" });
+  const [maintChecking,    setMaintChecking]    = useState(false); // spinner while pre-checking
+
+  // Pre-check before switching to maintenance: warn immediately if active bookings exist
+  const handleMaintenanceToggle = async (newValue) => {
+    if (isEdit && newValue === true && !form.underMaintenance) {
+      setMaintChecking(true);
+      try {
+        const bookings = await RoomAPI.getActiveBookings(room.id);
+        if (bookings && bookings.length > 0) {
+          setMaintChecking(false);
+          onShowProtected && onShowProtected(bookings);
+          return;
+        }
+      } catch { /* if check fails, proceed — backend guards on save */ }
+      setMaintChecking(false);
+    }
+    setForm((p) => ({ ...p, underMaintenance: newValue }));
+  };
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
-
-  const toggleFac = (id) => {
-    setSelectedFacIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
+  const toggleFac = (id) =>
+    setSelectedFacIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
   const validate = () => {
     if (!form.name.trim()) return "Room name is required.";
@@ -173,15 +185,11 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
         capacity:         Number(form.capacity),
         description:      form.description.trim(),
         approvalRequired: form.approvalRequired,
+        underMaintenance: form.underMaintenance,  // ← was missing
       };
-
       let roomId;
-      if (isEdit) {
-        await RoomAPI.update(room.id, payload);
-        roomId = room.id;
-      } else {
-        roomId = await RoomAPI.create(payload);
-      }
+      if (isEdit) { await RoomAPI.update(room.id, payload); roomId = room.id; }
+      else        { roomId = await RoomAPI.create(payload); }
 
       const prevIds  = (room?.facilities ?? []).map((f) => f.id);
       const toRemove = prevIds.filter((id) => !selectedFacIds.includes(id));
@@ -195,7 +203,23 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
       setAlert({ msg: isEdit ? "Room updated!" : "Room created!", type:"success" });
       setTimeout(onSaved, 700);
     } catch (e) {
-      setAlert({ msg: e.message || "Something went wrong.", type:"error" });
+      const msg = e.message || "Something went wrong.";
+
+      // Backend blocked maintenance-flip because of active bookings →
+      // close this modal and open ProtectedRoomModal (same as delete flow)
+      if (isEdit && msg.startsWith("ROOM_HAS_ACTIVE_BOOKINGS") && onShowProtected) {
+        setLoading(false);
+        try {
+          const bookings = await RoomAPI.getActiveBookings(room.id);
+          onShowProtected(bookings);   // hands off to ProtectedRoomModal
+        } catch {
+          // fallback: just show inline error if bookings fetch fails
+          setAlert({ msg: "This room has active bookings. Cannot enable maintenance mode.", type:"error" });
+        }
+        return;
+      }
+
+      setAlert({ msg, type:"error" });
     } finally { setLoading(false); }
   };
 
@@ -204,12 +228,9 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal modal--room">
-
         <div className="modal__header">
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div className="modal__room-icon-wrap">
-              <RoomIcon size={20} color="#16A34A" />
-            </div>
+            <div className="modal__room-icon-wrap"><RoomIcon size={20} color="#16A34A" /></div>
             <h2 className="modal__title">{isEdit ? "Edit Room" : "New Room"}</h2>
           </div>
           <button className="modal__close" onClick={onClose}>✕</button>
@@ -224,14 +245,11 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
           </div>
         )}
 
-        {/* Room Name */}
         <label className="form-label" htmlFor="room-name">Room Name *</label>
         <input id="room-name" className="form-input form-input--green"
-          placeholder="e.g. Conference Room A"
-          value={form.name} onChange={set("name")}
+          placeholder="e.g. Conference Room A" value={form.name} onChange={set("name")}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
 
-        {/* Branch — custom dropdown, never clipped by modal overflow */}
         <label className="form-label">Branch *</label>
         <BranchDropdown
           branches={branches}
@@ -239,26 +257,21 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
           onChange={(id) => setForm((p) => ({ ...p, branchId: id }))}
         />
 
-        {/* Capacity + Description */}
         <div className="form-row">
           <div>
             <label className="form-label" htmlFor="room-cap">Capacity *</label>
-            <input id="room-cap" type="number" min="1"
-              className="form-input form-input--yellow"
-              placeholder="e.g. 10"
-              value={form.capacity} onChange={set("capacity")}
+            <input id="room-cap" type="number" min="1" className="form-input form-input--yellow"
+              placeholder="e.g. 10" value={form.capacity} onChange={set("capacity")}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
           </div>
           <div>
             <label className="form-label" htmlFor="room-desc">Description</label>
-            <input id="room-desc" className="form-input"
-              placeholder="Optional notes"
+            <input id="room-desc" className="form-input" placeholder="Optional notes"
               value={form.description} onChange={set("description")}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
           </div>
         </div>
 
-        {/* Facilities */}
         <label className="form-label">Facilities</label>
         <div className="fac-dropdown" onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget)) setFacDropOpen(false);
@@ -269,14 +282,11 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
             <span className="fac-dropdown__preview">
               {selectedFacilities.length === 0
                 ? <span style={{ color:"#94A3B8" }}>— Select facilities —</span>
-                : selectedFacilities.map((f) => (
-                    <span key={f.id} className="fac-tag">{f.name}</span>
-                  ))
+                : selectedFacilities.map((f) => <span key={f.id} className="fac-tag">{f.name}</span>)
               }
             </span>
             <span className="fac-dropdown__arrow">{facDropOpen ? "▲" : "▼"}</span>
           </button>
-
           {facDropOpen && (
             <div className="fac-dropdown__menu">
               {allFacilities.length === 0
@@ -284,15 +294,11 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
                 : allFacilities.map((f) => {
                     const checked = selectedFacIds.includes(f.id);
                     return (
-                      <label key={f.id}
-                        className={`fac-option${checked ? " fac-option--checked" : ""}`}>
+                      <label key={f.id} className={`fac-option${checked ? " fac-option--checked" : ""}`}>
                         <span className="fac-option__check">{checked ? "✓" : ""}</span>
                         <span className="fac-option__name">{f.name}</span>
-                        {f.description && (
-                          <span className="fac-option__desc">{f.description}</span>
-                        )}
-                        <input type="checkbox" checked={checked}
-                          onChange={() => toggleFac(f.id)}
+                        {f.description && <span className="fac-option__desc">{f.description}</span>}
+                        <input type="checkbox" checked={checked} onChange={() => toggleFac(f.id)}
                           style={{ display:"none" }} />
                       </label>
                     );
@@ -312,12 +318,37 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
           </div>
         )}
 
-        {/* Booking Approval */}
         <label className="form-label" style={{ marginTop:14 }}>Booking Approval</label>
         <ApprovalToggle
           value={form.approvalRequired}
           onChange={(v) => setForm((p) => ({ ...p, approvalRequired: v }))}
         />
+
+        {/* ── Room Status (Maintenance) ── */}
+        <label className="form-label" style={{ marginTop:14 }}>Room Status</label>
+        <div className="apt-wrap">
+          <button type="button"
+            className={`apt-btn apt-btn--available${!form.underMaintenance ? " apt-btn--active" : ""}`}
+            onClick={() => handleMaintenanceToggle(false)}>
+            <span className="apt-btn__icon">✅</span>
+            <span className="apt-btn__text">
+              <span className="apt-btn__title">Available</span>
+              <span className="apt-btn__sub">Room is open for bookings</span>
+            </span>
+            {!form.underMaintenance && <span className="apt-btn__check">✓</span>}
+          </button>
+          <button type="button"
+            className={`apt-btn apt-btn--maintenance${form.underMaintenance ? " apt-btn--active" : ""}`}
+            onClick={() => handleMaintenanceToggle(true)}
+            disabled={maintChecking}>
+            <span className="apt-btn__icon">{maintChecking ? "⏳" : "🔧"}</span>
+            <span className="apt-btn__text">
+              <span className="apt-btn__title">Under Maintenance</span>
+              <span className="apt-btn__sub">{maintChecking ? "Checking active bookings…" : "Blocks all new bookings"}</span>
+            </span>
+            {form.underMaintenance && !maintChecking && <span className="apt-btn__check">✓</span>}
+          </button>
+        </div>
 
         <div className="modal__footer" style={{ marginTop:20 }}>
           <button className="btn-cancel" onClick={onClose}>Cancel</button>
@@ -330,15 +361,189 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved }) {
   );
 }
 
-// ─── DELETE MODAL ─────────────────────────────────────────────────
-function DeleteModal({ room, onClose, onDeleted }) {
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
-  const handleDelete = async () => {
-    setLoading(true); setError("");
-    try { await RoomAPI.delete(room.id); onDeleted(); }
-    catch (e) { setError(e.message || "Delete failed."); setLoading(false); }
+// ─── PROTECTED ROOM MODAL ─────────────────────────────────────────
+// Shown when admin tries to delete a room that has active bookings.
+// Lists the active bookings and lets admin set a reminder for the latest end time.
+function ProtectedRoomModal({ room, activeBookings, onClose }) {
+  const [reminderStatus, setReminderStatus] = useState({}); // { [bookingId]: "loading"|"done"|"error" }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("en-IN", {
+      weekday: "short", day: "2-digit", month: "short", year: "numeric",
+    });
+  }
+  function fmtTime(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  }
+
+  const latestBooking = activeBookings.reduce((latest, b) =>
+    !latest || new Date(b.endTime) > new Date(latest.endTime) ? b : latest, null);
+
+  const handleReminder = async (bookingId) => {
+    setReminderStatus((prev) => ({ ...prev, [bookingId]: "loading" }));
+    try {
+      await NotificationAPI.createReminder(bookingId);
+      setReminderStatus((prev) => ({ ...prev, [bookingId]: "done" }));
+    } catch {
+      setReminderStatus((prev) => ({ ...prev, [bookingId]: "error" }));
+    }
   };
+
+  const priorityColor = { High: "#DC2626", Medium: "#CA8A04", Low: "#16A34A" };
+  const statusColor   = { Approved: "#16A34A", Pending: "#CA8A04" };
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal modal--protected">
+        {/* Header */}
+        <div className="modal__header">
+          <h2 className="modal__title" style={{ color:"#CA8A04" }}>
+            🔒 Room Protected
+          </h2>
+          <button className="modal__close" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Explanation */}
+        <div className="protected-alert">
+          <div className="protected-alert__icon">⚠️</div>
+          <div className="protected-alert__body">
+            <strong>{room.name}</strong> cannot be deleted right now.
+            <div style={{ fontSize:12, color:"#64748B", marginTop:3, fontFamily:"monospace" }}>
+              It has {activeBookings.length} active booking{activeBookings.length !== 1 ? "s" : ""} that must complete first.
+            </div>
+          </div>
+        </div>
+
+        {/* Active bookings list */}
+        <div className="protected-bookings">
+          <div className="protected-bookings__title">Active Bookings</div>
+          {activeBookings.map((b) => {
+            const rs = reminderStatus[b.id];
+            return (
+              <div key={b.id} className="protected-booking-item">
+                <div className="protected-booking-item__info">
+                  <div style={{ fontFamily:"Georgia,serif", fontSize:13, fontWeight:"bold", color:"#1e3a5f" }}>
+                    {b.employeeName}
+                  </div>
+                  <div style={{ fontFamily:"monospace", fontSize:11, color:"#64748B", marginTop:2 }}>
+                    <span style={{ color: statusColor[b.status] || "#64748B" }}>
+                      ● {b.status}
+                    </span>
+                    {" · "}
+                    <span style={{ color: priorityColor[b.priority] || "#64748B" }}>
+                      {b.priority} Priority
+                    </span>
+                  </div>
+                  <div style={{ fontFamily:"monospace", fontSize:11, color:"#94A3B8", marginTop:2 }}>
+                    📅 {fmtDate(b.startTime)} · ⏱ {fmtTime(b.startTime)} – {fmtTime(b.endTime)}
+                  </div>
+                  {b.notes && (
+                    <div style={{ fontSize:11, color:"#94A3B8", fontStyle:"italic", marginTop:2 }}>
+                      "{b.notes}"
+                    </div>
+                  )}
+                </div>
+                <button
+                  className={`btn-set-reminder${rs === "done" ? " btn-set-reminder--done" : ""}`}
+                  onClick={() => handleReminder(b.id)}
+                  disabled={rs === "loading" || rs === "done"}
+                  title="Get notified when this meeting ends"
+                >
+                  {rs === "loading" ? "..." :
+                   rs === "done"    ? "✓ Set" :
+                   rs === "error"   ? "⚠ Retry" :
+                   "🔔 Remind me"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* What to do tip */}
+        <div className="protected-tip">
+          <span>💡</span>
+          <span>
+            {latestBooking
+              ? `You can delete this room after all bookings complete. The latest ends at ${fmtTime(latestBooking.endTime)} on ${fmtDate(latestBooking.endTime)}.`
+              : "You can delete this room once all active bookings are complete."
+            }
+          </span>
+        </div>
+
+        {/* Footer */}
+        <div className="modal__footer">
+          <button className="btn-save-room" onClick={onClose}>Got it</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DELETE MODAL ─────────────────────────────────────────────────
+// Phase 1: Check active bookings (loading spinner)
+// Phase 2a: Room is free → show normal delete confirm
+// Phase 2b: Room has active bookings → hand off to ProtectedRoomModal
+function DeleteModal({ room, onClose, onDeleted, onShowProtected }) {
+  const [phase,   setPhase]   = useState("checking"); // "checking" | "confirm" | "deleting"
+  const [error,   setError]   = useState("");
+
+  useEffect(() => {
+    async function check() {
+      try {
+        const bookings = await RoomAPI.getActiveBookings(room.id);
+        if (bookings && bookings.length > 0) {
+          // Room is protected — close this modal, open protected modal
+          onShowProtected(bookings);
+        } else {
+          setPhase("confirm");
+        }
+      } catch {
+        // If check fails, still show confirm (backend will guard on actual delete)
+        setPhase("confirm");
+      }
+    }
+    check();
+  }, [room.id, onShowProtected]);
+
+  const handleDelete = async () => {
+    setPhase("deleting");
+    setError("");
+    try {
+      await RoomAPI.delete(room.id);
+      onDeleted();
+    } catch (e) {
+      const msg = e.message || "Delete failed.";
+      // If backend returns protection error, show protected modal
+      if (msg.startsWith("ROOM_HAS_ACTIVE_BOOKINGS")) {
+        onShowProtected([]);  // trigger protected modal (no booking detail from this path)
+      } else {
+        setError(msg);
+        setPhase("confirm");
+      }
+    }
+  };
+
+  if (phase === "checking") {
+    return (
+      <div className="modal-overlay">
+        <div className="modal">
+          <div className="modal__header">
+            <h2 className="modal__title" style={{ color:"#DC2626" }}>🗑️ Delete Room</h2>
+            <button className="modal__close" onClick={onClose}>✕</button>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"32px", gap:12 }}>
+            <div className="room-spinner" />
+            <p style={{ fontFamily:"monospace", fontSize:12, color:"#94A3B8" }}>
+              Checking for active bookings…
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -347,25 +552,28 @@ function DeleteModal({ room, onClose, onDeleted }) {
           <button className="modal__close" onClick={onClose}>✕</button>
         </div>
         <p className="modal__subtitle">This action cannot be undone.</p>
+
         {error && <div className="form-alert form-alert--error">✕ {error}</div>}
+
         <p style={{ fontFamily:"Georgia,serif", fontSize:15, color:"#1e3a5f", marginBottom:6 }}>
           Are you sure you want to delete:
         </p>
         <p style={{
           fontFamily:"Georgia,serif", fontSize:17, fontWeight:"bold", color:"#DC2626",
-          padding:"10px 14px", background:"rgba(254,242,242,0.7)",
-          borderRadius:10, border:"1px solid rgba(239,68,68,0.2)", marginBottom:8,
-          display:"flex", alignItems:"center", gap:8
+          padding:"10px 14px", background:"rgba(254,242,242,0.7)", borderRadius:10,
+          border:"1px solid rgba(239,68,68,0.2)", marginBottom:8,
+          display:"flex", alignItems:"center", gap:8,
         }}>
           <RoomIcon size={18} color="#DC2626" /> {room.name}
         </p>
         <p style={{ fontSize:12, color:"#94A3B8", fontFamily:"monospace", marginBottom:24 }}>
-          🏢 {room.branchName || room.branch?.name || "—"}  ·  👥 Capacity {room.capacity ?? "—"}
+          🏢 {room.branchName || room.branch?.name || "—"} · 👥 Capacity {room.capacity ?? "—"}
         </p>
+
         <div className="modal__footer">
           <button className="btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="btn-delete-confirm" onClick={handleDelete} disabled={loading}>
-            {loading ? "Deleting..." : "Yes, Delete"}
+          <button className="btn-delete-confirm" onClick={handleDelete} disabled={phase === "deleting"}>
+            {phase === "deleting" ? "Deleting..." : "Yes, Delete"}
           </button>
         </div>
       </div>
@@ -382,15 +590,8 @@ function RoomCard({ room, index, onEdit, onDelete }) {
   const tags  = expanded ? facilities : facilities.slice(0, LIMIT);
   const extra = facilities.length - LIMIT;
 
-  const iconTints = {
-    green:"rgba(22,163,74,0.12)", blue:"rgba(37,99,235,0.12)",
-    yellow:"rgba(202,138,4,0.12)", sky:"rgba(2,132,199,0.12)",
-    purple:"rgba(124,58,237,0.12)", red:"rgba(220,38,38,0.12)",
-  };
-  const iconColors = {
-    green:"#16A34A", blue:"#2563EB", yellow:"#CA8A04",
-    sky:"#0284C7", purple:"#7C3AED", red:"#DC2626",
-  };
+  const iconTints  = { green:"rgba(22,163,74,0.12)", blue:"rgba(37,99,235,0.12)", yellow:"rgba(202,138,4,0.12)", sky:"rgba(2,132,199,0.12)", purple:"rgba(124,58,237,0.12)", red:"rgba(220,38,38,0.12)" };
+  const iconColors = { green:"#16A34A", blue:"#2563EB", yellow:"#CA8A04", sky:"#0284C7", purple:"#7C3AED", red:"#DC2626" };
   const tint   = iconTints[color]  || iconTints.green;
   const icolor = iconColors[color] || iconColors.green;
 
@@ -409,31 +610,25 @@ function RoomCard({ room, index, onEdit, onDelete }) {
               onClick={() => onDelete(room)} title="Delete">🗑️</button>
           </div>
         </div>
-
         <div className="room-card__name">{room.name}</div>
         <div className="room-card__branch">🏢 {room.branchName || room.branch?.name || "—"}</div>
-
         <div className="room-card__meta">
           <div className="room-card__cap">
             <span className="room-card__cap-icon">👥</span>
             <span>{room.capacity ?? "—"} people</span>
           </div>
-          <span className={`approval-badge ${room.approvalRequired
-            ? "approval-badge--required" : "approval-badge--instant"}`}>
+          <span className={`approval-badge ${room.approvalRequired ? "approval-badge--required" : "approval-badge--instant"}`}>
             {room.approvalRequired ? "🔐 Approval" : "⚡ Instant"}
           </span>
         </div>
-
         {room.description && (
-          <p style={{ fontSize:12, color:"#94A3B8", fontFamily:"Georgia,serif",
-            marginBottom:10, lineHeight:1.5 }}>{room.description}</p>
+          <p style={{ fontSize:12, color:"#94A3B8", fontFamily:"Georgia,serif", marginBottom:10, lineHeight:1.5 }}>
+            {room.description}
+          </p>
         )}
-
         {facilities.length > 0 && (
           <div className="room-card__facilities">
-            {tags.map((f, i) => (
-              <span key={i} className="room-facility-tag">{f.name || f}</span>
-            ))}
+            {tags.map((f, i) => <span key={i} className="room-facility-tag">{f.name || f}</span>)}
             {extra > 0 && !expanded && (
               <button className="room-facility-tag room-facility-tag--more"
                 onClick={() => setExpanded(true)}>+{extra} more</button>
@@ -450,32 +645,26 @@ function RoomCard({ room, index, onEdit, onDelete }) {
 }
 
 // ─── STAT CARD ────────────────────────────────────────────────────
-function StatCard({ value, label, icon, color, bg, border, onClick, active }) {
+function StatCard({ value, label, icon, color, border, onClick, active }) {
   return (
-    <div
-      className="room-stat-card"
+    <div className="room-stat-card"
       style={{
         borderColor: active ? color : border,
-        background:  bg,
         cursor:      onClick ? "pointer" : "default",
         outline:     active ? `2px solid ${color}` : "2px solid transparent",
-        transform:   active ? "scale(1.03)" : "scale(1)",
-        transition:  "transform 0.15s, outline 0.15s, border-color 0.15s",
         userSelect:  "none",
       }}
-      onClick={onClick}
-    >
-      <div className="room-stat-card__icon" style={{ background: bg, color }}>{icon}</div>
-      <div>
+      onClick={onClick}>
+      <div className="room-stat-card__glow" style={{ background: color }} />
+      <div className="room-stat-card__icon" style={{ background: `${color}1a`, color }}>
+        {icon}
+      </div>
+      <div className="room-stat-card__info">
         <div className="room-stat-card__value" style={{ color }}>{value}</div>
         <div className="room-stat-card__label">{label}</div>
       </div>
       {onClick && (
-        <div style={{
-          marginLeft:"auto", fontSize:10,
-          color: active ? color : "#CBD5E1",
-          fontFamily:"monospace", alignSelf:"flex-end", paddingBottom:2,
-        }}>
+        <div className="room-stat-card__hint" style={{ color: active ? color : "#CBD5E1" }}>
           {active ? "✓ active" : "click to filter"}
         </div>
       )}
@@ -501,32 +690,28 @@ export default function RoomManagement() {
   const [modal,          setModal]          = useState(null);
 
   const fetchAll = useCallback(async () => {
-  setLoading(true); setError("");
-  try {
-    const [roomsRes, branchesRes, facRes] = await Promise.allSettled([
-      RoomAPI.getAll(),
-      BranchAPI.getSimple(),   // ← ONLY this, removed BranchAPI.getAll()
-      FacilityAPI.getAll(),
-    ]);
-
-    console.log("branches raw:", branchesRes.value); // remove after confirming
-
-    const roomList = roomsRes.status === "fulfilled"
-      ? (Array.isArray(roomsRes.value) ? roomsRes.value : (roomsRes.value?.items ?? []))
-      : [];
-    const branchList = branchesRes.status === "fulfilled"
-      ? (Array.isArray(branchesRes.value) ? branchesRes.value : (branchesRes.value?.items ?? []))
-      : [];
-    const facList = facRes.status === "fulfilled"
-      ? (Array.isArray(facRes.value) ? facRes.value : (facRes.value?.items ?? []))
-      : [];
-
-    setRooms(roomList);
-    setBranches(branchList);
-    setAllFacilities(facList);
-  } catch (e) { setError(e.message || "Failed to load rooms."); }
-  finally     { setLoading(false); }
-}, []);
+    setLoading(true); setError("");
+    try {
+      const [roomsRes, branchesRes, facRes] = await Promise.allSettled([
+        RoomAPI.getAll(),
+        BranchAPI.getSimple(),
+        FacilityAPI.getAll(),
+      ]);
+      const roomList   = roomsRes.status    === "fulfilled"
+        ? (Array.isArray(roomsRes.value)    ? roomsRes.value    : (roomsRes.value?.items    ?? []))
+        : [];
+      const branchList = branchesRes.status === "fulfilled"
+        ? (Array.isArray(branchesRes.value) ? branchesRes.value : (branchesRes.value?.items ?? []))
+        : [];
+      const facList    = facRes.status      === "fulfilled"
+        ? (Array.isArray(facRes.value)      ? facRes.value      : (facRes.value?.items      ?? []))
+        : [];
+      setRooms(roomList);
+      setBranches(branchList);
+      setAllFacilities(facList);
+    } catch (e) { setError(e.message || "Failed to load rooms."); }
+    finally     { setLoading(false); }
+  }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -566,8 +751,15 @@ export default function RoomManagement() {
   const handleSaved   = () => { closeModal(); fetchAll(); };
   const handleDeleted = () => { closeModal(); fetchAll(); };
 
+  // Called by DeleteModal when active bookings are found
+  const handleShowProtected = (room, activeBookings) =>
+    setModal({ type:"protected", room, activeBookings });
+
   const handleApprovalStatClick = (filterValue) =>
     setApprovalFilter((prev) => prev === filterValue ? "all" : filterValue);
+
+  const hasFilters = search || branchFilter !== "all" || approvalFilter !== "all";
+  const clearAll   = () => { setSearch(""); setBranchFilter("all"); setApprovalFilter("all"); };
 
   return (
     <div className="room-page">
@@ -581,40 +773,47 @@ export default function RoomManagement() {
           </h2>
           <p className="room-page__sub">Create and manage meeting rooms across all branches</p>
         </div>
-        <button className="btn-add-room" onClick={openAdd}><span>+</span> Add Room</button>
+        <div style={{ display:"flex", alignItems:"center", gap:"12px" }}>
+          <div style={{
+            display:"flex", alignItems:"center", justifyContent:"center",
+            width:"42px", height:"42px", borderRadius:"14px",
+            border:"1.5px solid rgba(59,130,246,0.12)",
+            background:"rgba(255,255,255,0.95)",
+            backdropFilter:"blur(12px)",
+            WebkitBackdropFilter:"blur(12px)",
+            boxShadow:"0 4px 16px rgba(59,130,246,0.10), inset 0 1px 0 rgba(255,255,255,1)",
+            transition:"all 0.2s",
+          }}>
+            <NotificationBell />
+          </div>
+          <button className="btn-add-room" onClick={openAdd}><span>+</span> Add Room</button>
+        </div>
       </div>
 
       {/* Stat cards */}
       <div className="room-stats-grid">
         <StatCard
-          value={loading ? "—" : rooms.length}
-          label="Total Rooms"
+          value={loading ? "—" : rooms.length} label="Total Rooms"
           icon={<RoomIcon size={20} color="#2563EB" />}
-          color="#2563EB" bg="rgba(239,246,255,0.80)" border="rgba(59,130,246,0.18)"
+          color="#2563EB" border="rgba(59,130,246,0.18)"
           onClick={() => { setApprovalFilter("all"); setBranchFilter("all"); setSearch(""); }}
           active={approvalFilter === "all" && branchFilter === "all" && search === ""}
         />
         <StatCard
-          value={loading ? "—" : totalApproval}
-          label="Requires Approval"
-          icon="🔐"
-          color="#92400E" bg="rgba(254,243,199,0.80)" border="rgba(217,119,6,0.20)"
+          value={loading ? "—" : totalApproval} label="Requires Approval" icon="🔐"
+          color="#92400E" border="rgba(217,119,6,0.20)"
           onClick={() => handleApprovalStatClick("required")}
           active={approvalFilter === "required"}
         />
         <StatCard
-          value={loading ? "—" : totalInstant}
-          label="Instant Booking"
-          icon="⚡"
-          color="#065F46" bg="rgba(209,250,229,0.80)" border="rgba(22,163,74,0.20)"
+          value={loading ? "—" : totalInstant} label="Instant Booking" icon="⚡"
+          color="#065F46" border="rgba(22,163,74,0.20)"
           onClick={() => handleApprovalStatClick("instant")}
           active={approvalFilter === "instant"}
         />
         <StatCard
-          value={loading ? "—" : allFacilities.length}
-          label="Facilities Available"
-          icon="🔧"
-          color="#6D28D9" bg="rgba(237,233,254,0.80)" border="rgba(124,58,237,0.18)"
+          value={loading ? "—" : allFacilities.length} label="Facilities Available" icon="🔧"
+          color="#6D28D9" border="rgba(124,58,237,0.18)"
         />
       </div>
 
@@ -624,6 +823,9 @@ export default function RoomManagement() {
           <span className="room-search__icon">🔍</span>
           <input className="room-search__input" placeholder="Search rooms..."
             value={search} onChange={(e) => setSearch(e.target.value)} />
+          {search && (
+            <button className="room-search__clear" onClick={() => setSearch("")}>✕</button>
+          )}
         </div>
         <select className="room-filter-select" value={branchFilter}
           onChange={(e) => setBranchFilter(e.target.value)}>
@@ -641,6 +843,9 @@ export default function RoomManagement() {
           <option value="name">Sort: Name A–Z</option>
           <option value="capacity">Sort: Capacity ↓</option>
         </select>
+        {hasFilters && (
+          <button className="room-clear-btn" onClick={clearAll}>✕ Clear</button>
+        )}
         <span className="room-count-badge">
           {filtered.length} {filtered.length === 1 ? "room" : "rooms"}
         </span>
@@ -651,19 +856,15 @@ export default function RoomManagement() {
       {/* Grid */}
       <div className="room-grid">
         {loading ? (
-          <div className="room-loading">
-            <div className="room-spinner" /><p>Loading rooms...</p>
-          </div>
+          <div className="room-loading"><div className="room-spinner" /><p>Loading rooms...</p></div>
         ) : filtered.length === 0 ? (
           <div className="room-empty">
             <div className="room-empty__icon"><RoomIcon size={52} color="#CBD5E1" /></div>
             <div className="room-empty__title">
-              {search || branchFilter !== "all" || approvalFilter !== "all"
-                ? "No rooms match your filters" : "No rooms yet"}
+              {hasFilters ? "No rooms match your filters" : "No rooms yet"}
             </div>
             <div className="room-empty__sub">
-              {search || branchFilter !== "all" || approvalFilter !== "all"
-                ? "Try clearing your filters" : "Click 'Add Room' to create your first room"}
+              {hasFilters ? "Try clearing your filters" : "Click 'Add Room' to create your first room"}
             </div>
           </div>
         ) : (
@@ -677,16 +878,31 @@ export default function RoomManagement() {
 
       <Pagination current={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={setPage} />
 
+      {/* Modals */}
       {modal?.type === "add" && (
         <RoomModal mode="add" branches={branches} allFacilities={allFacilities}
           onClose={closeModal} onSaved={handleSaved} />
       )}
       {modal?.type === "edit" && (
         <RoomModal mode="edit" room={modal.room} branches={branches} allFacilities={allFacilities}
-          onClose={closeModal} onSaved={handleSaved} />
+          onClose={closeModal} onSaved={handleSaved}
+          onShowProtected={(bookings) => handleShowProtected(modal.room, bookings)}
+        />
       )}
       {modal?.type === "delete" && (
-        <DeleteModal room={modal.room} onClose={closeModal} onDeleted={handleDeleted} />
+        <DeleteModal
+          room={modal.room}
+          onClose={closeModal}
+          onDeleted={handleDeleted}
+          onShowProtected={(bookings) => handleShowProtected(modal.room, bookings)}
+        />
+      )}
+      {modal?.type === "protected" && (
+        <ProtectedRoomModal
+          room={modal.room}
+          activeBookings={modal.activeBookings}
+          onClose={closeModal}
+        />
       )}
     </div>
   );

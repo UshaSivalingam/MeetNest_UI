@@ -297,3 +297,18 @@
 
   .layout__content { padding: 12px; }
 }
+
+/* Notification bell sits between page title and avatar in the navbar.
+   .navbar__right already uses display:flex + align-items:center + gap:12px
+   so the bell drops in automatically. These rules just ensure the dropdown
+   positions correctly relative to the fixed navbar. */
+
+/* Allow the bell's dropdown to overflow the navbar without being clipped */
+.navbar {
+  overflow: visible;   /* override any overflow:hidden if present */
+}
+
+/* On very small screens, hide the user-info text to give bell more room */
+@media (max-width: 480px) {
+  .navbar__user-info { display: none; }
+}

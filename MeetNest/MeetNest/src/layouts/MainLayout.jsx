@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import NotificationBell from "../components/NotificationBell";
 import "../styles/MainLayout.css";
 
 export default function MainLayout({ children, currentPage, onNavigate }) {
@@ -17,21 +18,17 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
   ];
 
   const employeeNav = [
-    { key: "dashboard",   label: "Dashboard",    icon: "🏠" },
-    { key: "browse-rooms",       label: "Browse Rooms", icon: "🚪" },
-    { key: "my-bookings", label: "My Bookings",  icon: "📋" },
+    { key: "dashboard",    label: "Dashboard",    icon: "🏠" },
+    { key: "browse-rooms", label: "Browse Rooms", icon: "🚪" },
+    { key: "my-bookings",  label: "My Bookings",  icon: "📋" },
   ];
 
-  const navItems    = isAdmin ? adminNav : employeeNav;
-  const currentItem = navItems.find((n) => n.key === currentPage);
+  const navItems = isAdmin ? adminNav : employeeNav;
 
   return (
     <div className="layout">
-
-      {/* ── Sidebar — position:fixed, always full height ── */}
       <aside className={`sidebar${sidebarOpen ? "" : " sidebar--collapsed"}`}>
 
-        {/* Logo + toggle */}
         <div className="sidebar__logo">
           {sidebarOpen && (
             <span className="sidebar__logo-text">
@@ -49,7 +46,6 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="sidebar__nav">
           {navItems.map((item) => (
             <button
@@ -63,7 +59,6 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
           ))}
         </nav>
 
-        {/* User + logout */}
         <div className="sidebar__footer">
           {sidebarOpen && (
             <div className="sidebar__user">
@@ -81,32 +76,10 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
 
       </aside>
 
-      {/* ── Main area — margin-left syncs with sidebar width ── */}
       <div className={`layout__main${sidebarOpen ? "" : " layout__main--collapsed"}`}>
-
-        {/* Sticky Navbar */}
-        <header className="navbar">
-          <div className="navbar__left">
-            <h1 className="navbar__page-title">
-              {currentItem?.icon} {currentItem?.label || "Dashboard"}
-            </h1>
-          </div>
-          <div className="navbar__right">
-            <div className="navbar__avatar">
-              {(user?.fullName || user?.email || "U")[0].toUpperCase()}
-            </div>
-            <div className="navbar__user-info">
-              <p className="navbar__user-name">{user?.fullName || user?.email}</p>
-              <p className="navbar__user-role">{user?.role}</p>
-            </div>
-          </div>
-        </header>
-
-        {/* Scrollable page content */}
         <main className="layout__content">
           {children}
         </main>
-
       </div>
     </div>
   );

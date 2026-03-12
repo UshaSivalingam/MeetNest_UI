@@ -40,8 +40,8 @@ export default function WelcomePage({ onFinish }) {
     const t1 = setTimeout(() => setSeated(true),      400);
     const t2 = setTimeout(() => setShowTitle(true),   1900);
     const t3 = setTimeout(() => setShowTagline(true), 2500);
-    const t4 = setTimeout(() => setFadeOut(true),     4700);
-    const t5 = setTimeout(() => onFinish?.(),         5400);
+    const t4 = setTimeout(() => setFadeOut(true),     4000); //4700
+    const t5 = setTimeout(() => onFinish?.(),         4700); //5400
     return () => [t1,t2,t3,t4,t5].forEach(clearTimeout);
   }, [onFinish]);
 

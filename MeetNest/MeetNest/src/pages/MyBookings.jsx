@@ -5,13 +5,6 @@ import { BookingAPI } from "../api/bookingAPI";
 import Pagination from "../components/Pagination";
 import "../styles/MyBookings.css";
 
-if (typeof document !== "undefined" && !document.getElementById("emp-fonts")) {
-  const l = document.createElement("link");
-  l.id = "emp-fonts"; l.rel = "stylesheet";
-  l.href = "https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Fira+Code:wght@300;400;500&display=swap";
-  document.head.appendChild(l);
-}
-
 const PAGE_SIZE = 8;
 
 // ─── HELPERS ─────────────────────────────────────────────────────
@@ -56,10 +49,43 @@ function pm(raw = "") {
   return PRIORITY_META[raw.toLowerCase()] || PRIORITY_META.low;
 }
 
+// ─── STAT CARD ────────────────────────────────────────────────────
+function StatCard({ value, label, icon, color, border, onClick, active }) {
+  return (
+    <div className="mybk-stat-card"
+      style={{
+        borderColor: active ? color : border,
+        background:  active ? `${color}0f` : "#ffffff",
+        cursor:      onClick ? "pointer" : "default",
+        outline:     active ? `2px solid ${color}40` : "2px solid transparent",
+        userSelect:  "none",
+      }}
+      onClick={onClick}>
+
+      <div className="mybk-stat-card__glow" style={{ background: color }} />
+
+      <div className="mybk-stat-card__icon" style={{ background: `${color}1a`, color }}>
+        {icon}
+      </div>
+
+      <div className="mybk-stat-card__info">
+        <div className="mybk-stat-card__value" style={{ color }}>{value}</div>
+        <div className="mybk-stat-card__label">{label}</div>
+      </div>
+
+      {onClick && (
+        <div className="mybk-stat-card__hint" style={{ color: active ? color : "#CBD5E1" }}>
+          {active ? "✓ active" : "click to filter"}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── DETAIL MODAL ─────────────────────────────────────────────────
 function DetailModal({ booking, onClose, onCancel }) {
-  const meta     = sm(booking.status);
-  const priMeta  = pm(booking.priority);
+  const meta    = sm(booking.status);
+  const priMeta = pm(booking.priority);
   const canCancel = ["pending", "approved"].includes(booking.status?.toLowerCase())
     && !isPast(booking.startTime);
 
@@ -88,18 +114,14 @@ function DetailModal({ booking, onClose, onCancel }) {
           </span>
         </p>
 
-        <Row label="Room"     value={booking.roomName} />
-        <Row label="Branch"   value={booking.branchName} />
-        <Row label="Date"     value={fmtDate(booking.startTime)} />
-        <Row label="Time"     value={`${fmtTime(booking.startTime)} – ${fmtTime(booking.endTime)}  (${durationLabel(booking.startTime, booking.endTime)})`} />
-        <Row label="Priority" value={`${priMeta.icon} ${priMeta.label}`} />
-
-        {/* Employee's own notes */}
+        <Row label="Room"      value={booking.roomName} />
+        <Row label="Branch"    value={booking.branchName} />
+        <Row label="Date"      value={fmtDate(booking.startTime)} />
+        <Row label="Time"      value={`${fmtTime(booking.startTime)} – ${fmtTime(booking.endTime)}  (${durationLabel(booking.startTime, booking.endTime)})`} />
+        <Row label="Priority"  value={`${priMeta.icon} ${priMeta.label}`} />
         {booking.notes && <Row label="Your Notes" value={booking.notes} />}
-
         <Row label="Booked On" value={fmtDate(booking.createdAt)} />
 
-        {/* ✅ Admin rejection/cancellation reason — correct field name: overrideReason */}
         {(booking.status?.toLowerCase() === "rejected" || booking.status?.toLowerCase() === "cancelled")
           && booking.overrideReason && (
           <div className="mybk-rejection" style={{ maxWidth: "100%", marginTop: 10 }}>
@@ -108,10 +130,7 @@ function DetailModal({ booking, onClose, onCancel }) {
           </div>
         )}
 
-        {/* Action info */}
-        {booking.actionAt && (
-          <Row label="Action At" value={fmtDate(booking.actionAt)} />
-        )}
+        {booking.actionAt && <Row label="Action At" value={fmtDate(booking.actionAt)} />}
 
         <div className="modal__footer">
           <button className="btn-cancel-modal" onClick={onClose}>Close</button>
@@ -193,8 +212,6 @@ function CancelModal({ booking, onClose, onDone }) {
 }
 
 // ─── BOOKING CARD ─────────────────────────────────────────────────
-// BookingCard component only — replace the function in MyBookings.jsx
-
 function BookingCard({ booking, onDetail, onCancel }) {
   const meta      = sm(booking.status);
   const priMeta   = pm(booking.priority);
@@ -224,7 +241,7 @@ function BookingCard({ booking, onDetail, onCancel }) {
           </div>
         </div>
 
-        {/* COL 2 — date / time + rejection reason (stays in this column) */}
+        {/* COL 2 — date / time */}
         <div className="mybk-card__when">
           <div className="mybk-card__date">{fmtDate(booking.startTime)}</div>
           <div className="mybk-card__time">
@@ -240,7 +257,6 @@ function BookingCard({ booking, onDetail, onCancel }) {
               Completed
             </div>
           )}
-          {/* ✅ Rejection reason lives inside __when so it never breaks the grid */}
           {(booking.status?.toLowerCase() === "rejected" || booking.status?.toLowerCase() === "cancelled")
             && booking.overrideReason && (
             <div className="mybk-rejection">
@@ -291,7 +307,6 @@ export default function MyBookings({ onNavigate }) {
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
 
-  // ── Fetch ─────────────────────────────────────────────────────
   const fetchBookings = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true); else setLoading(true);
     setError("");
@@ -307,7 +322,6 @@ export default function MyBookings({ onNavigate }) {
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
-  // ── Filter + sort ─────────────────────────────────────────────
   useEffect(() => {
     let list = [...bookings];
 
@@ -322,9 +336,9 @@ export default function MyBookings({ onNavigate }) {
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((b) =>
-        b.roomName?.toLowerCase().includes(q)    ||
-        b.branchName?.toLowerCase().includes(q)  ||
-        b.notes?.toLowerCase().includes(q));       // ✅ correct field: notes
+        b.roomName?.toLowerCase().includes(q)   ||
+        b.branchName?.toLowerCase().includes(q) ||
+        b.notes?.toLowerCase().includes(q));
     }
 
     list.sort((a, b) => {
@@ -351,17 +365,20 @@ export default function MyBookings({ onNavigate }) {
   const hasFilters   = search || statusFilter !== "all" || timeFilter !== "all";
   const clearFilters = () => { setSearch(""); setStatusFilter("all"); setTimeFilter("all"); setSortBy("newest"); };
 
+  const handleStatusStatClick = (key) =>
+    setStatusFilter((prev) => prev === key ? "all" : key);
+
   const openDetail = (b) => setModal({ type: "detail", booking: b });
   const openCancel = (b) => setModal({ type: "cancel", booking: b });
   const closeModal = ()  => setModal(null);
   const handleDone = ()  => { closeModal(); fetchBookings(true); };
 
-  const STATS = [
-    { key: "all",       label: "Total",     icon: "📋", iconCls: "all"       },
-    { key: "pending",   label: "Pending",   icon: "⏳", iconCls: "pending"   },
-    { key: "approved",  label: "Approved",  icon: "✅", iconCls: "approved"  },
-    { key: "rejected",  label: "Rejected",  icon: "❌", iconCls: "rejected"  },
-    { key: "cancelled", label: "Cancelled", icon: "🚫", iconCls: "cancelled" },
+  const STAT_DEFS = [
+    { key: "all",       label: "Total",     icon: "📋", color: "#2563EB", border: "rgba(59,130,246,0.18)"  },
+    { key: "pending",   label: "Pending",   icon: "⏳", color: "#CA8A04", border: "rgba(217,119,6,0.20)"   },
+    { key: "approved",  label: "Approved",  icon: "✅", color: "#065F46", border: "rgba(22,163,74,0.20)"   },
+    { key: "rejected",  label: "Rejected",  icon: "❌", color: "#DC2626", border: "rgba(220,38,38,0.18)"   },
+    { key: "cancelled", label: "Cancelled", icon: "🚫", color: "#64748B", border: "rgba(148,163,184,0.18)" },
   ];
 
   return (
@@ -378,11 +395,11 @@ export default function MyBookings({ onNavigate }) {
             <button
               style={{
                 display: "flex", alignItems: "center", gap: 6,
-                padding: "9px 18px", borderRadius: 12, border: "none",
+                padding: "9px 18px", borderRadius: 14, border: "none",
                 background: "linear-gradient(135deg,#22C55E,#16A34A)",
                 color: "#fff", fontSize: 12, fontFamily: "Georgia,serif",
-                fontWeight: "bold", letterSpacing: 1, cursor: "pointer",
-                boxShadow: "0 4px 14px rgba(22,163,74,0.2)",
+                fontWeight: "bold", letterSpacing: "0.8px", cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(22,163,74,0.22)",
               }}
               onClick={() => onNavigate("browse-rooms")}
             >
@@ -399,23 +416,19 @@ export default function MyBookings({ onNavigate }) {
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="mybk-stats">
-        {STATS.map((s) => (
-          <div
+      {/* ── Stat Cards ── */}
+      <div className="mybk-stats-grid">
+        {STAT_DEFS.map((s) => (
+          <StatCard
             key={s.key}
-            className={`mybk-stat${statusFilter === s.key ? " mybk-stat--active" : ""}`}
-            onClick={() => setStatusFilter(s.key)}
-            title={`Filter: ${s.label}`}
-          >
-            <div className={`mybk-stat__icon mybk-stat__icon--${s.iconCls}`}>{s.icon}</div>
-            <div>
-              <div className={`mybk-stat__value mybk-stat__value--${s.iconCls}`}>
-                {loading ? "—" : counts[s.key]}
-              </div>
-              <div className="mybk-stat__label">{s.label}</div>
-            </div>
-          </div>
+            value={loading ? "—" : counts[s.key]}
+            label={s.label}
+            icon={s.icon}
+            color={s.color}
+            border={s.border}
+            onClick={() => handleStatusStatClick(s.key)}
+            active={statusFilter === s.key}
+          />
         ))}
       </div>
 
@@ -429,16 +442,10 @@ export default function MyBookings({ onNavigate }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button className="mybk-search__clear" onClick={() => setSearch("")}>✕</button>
+          )}
         </div>
-
-        <select className="mybk-filter-select" value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="all">All Statuses</option>
-          <option value="pending">⏳ Pending</option>
-          <option value="approved">✅ Approved</option>
-          <option value="rejected">❌ Rejected</option>
-          <option value="cancelled">🚫 Cancelled</option>
-        </select>
 
         <select className="mybk-filter-select" value={timeFilter}
           onChange={(e) => setTimeFilter(e.target.value)}>

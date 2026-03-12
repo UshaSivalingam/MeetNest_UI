@@ -353,12 +353,12 @@ function BranchCard({ branch, index, onEdit, onDelete }) {
       </div>
       <div className="branch-card__stats">
         <div className="branch-card__stat">
-          <span className="branch-card__stat-icon">🚪</span>
+          {/*<span className="branch-card__stat-icon">🚪</span>*/}
           <span className="branch-card__stat-value">{rooms}</span>
           <span className="branch-card__stat-label">Rooms</span>
         </div>
         <div className="branch-card__stat">
-          <span className="branch-card__stat-icon">👥</span>
+          {/*<span className="branch-card__stat-icon">👥</span>*/}
           <span className="branch-card__stat-value">{emps}</span>
           <span className="branch-card__stat-label">Employees</span>
         </div>

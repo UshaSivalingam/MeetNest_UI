@@ -9,14 +9,59 @@ import "../styles/FacilityManagement.css";
 
 // ─── BUILT-IN ICON OPTIONS ────────────────────────────────────────
 const FACILITY_ICONS = [
-  "📽️","🖥️","📺","📡","🔊","🎙️","📷","🖨️","💻","⌨️",
-  "🌡️","❄️","🌬️","💡","🔌","🔋","📶","🛋️","🪑","🚿",
-  "☕","🍽️","🧴","🪟","🚪","🔒","🧹","♿","📋","🗂️",
-  "🖱️","🖲️","📠","📟","🧯","🪴","🗑️","🧲","🔧","🪛",
-  "🛠️","🔑","🪞","🛏️","🚻","🏋️","📦","🧸","🎯","🎮",
+  "📽️","🖥️","📡","🔊","🎙️","📷","🖨️","💻","⌨️",
+  "❄️","💡","🔌","📶","🛋️","🪑",
+  "🔒","♿","📋","🗂️","🧯","🪴","🗑️"
 ];
 
 const EMPTY_FORM = { name: "", description: "", icon: "🔧" };
+
+// ─── FACILITY ICON (SVG — mirrors RoomIcon pattern) ───────────────
+function FacilityIcon({ size = 22, color = "#2563EB" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="18" height="18" rx="3" fill={color} fillOpacity="0.12" stroke={color} strokeWidth="1.6"/>
+      <path d="M8 12h8M12 8v8" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+// ─── STAT CARD — exact same component shape as RoomManagement ─────
+function StatCard({ value, label, icon, color, border, onClick, active }) {
+  return (
+    <div className="facility-stat-card"
+      style={{
+        borderColor: active ? color : border,
+        background:  active ? `${color}0f` : "#ffffff",
+        cursor:      onClick ? "pointer" : "default",
+        outline:     active ? `2px solid ${color}40` : "2px solid transparent",
+        userSelect:  "none",
+      }}
+      onClick={onClick}>
+
+      {/* Glow blob top-right */}
+      <div className="facility-stat-card__glow" style={{ background: color }} />
+
+      {/* Icon */}
+      <div className="facility-stat-card__icon" style={{ background: `${color}1a`, color }}>
+        {icon}
+      </div>
+
+      {/* Value + label */}
+      <div className="facility-stat-card__info">
+        <div className="facility-stat-card__value" style={{ color }}>{value}</div>
+        <div className="facility-stat-card__label">{label}</div>
+      </div>
+
+      {/* Filter hint */}
+      {onClick && (
+        <div className="facility-stat-card__hint" style={{ color: active ? color : "#CBD5E1" }}>
+          {active ? "✓ active" : "click to filter"}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── USAGE PILL ───────────────────────────────────────────────────
 function UsagePill({ count }) {
@@ -35,13 +80,11 @@ function IconPicker({ value, onChange }) {
   const [customInput, setCustomInput] = useState("");
   const [customError, setCustomError] = useState("");
 
-  // Check if current value is a built-in icon
   const isBuiltIn = FACILITY_ICONS.includes(value);
 
   const handleCustomApply = () => {
     const trimmed = customInput.trim();
     if (!trimmed) return setCustomError("Please enter an emoji or text.");
-    // Basic: accept 1–3 chars (emoji can be multi-char due to unicode)
     if ([...trimmed].length > 3) return setCustomError("Keep it short — 1 emoji or up to 3 characters.");
     setCustomError("");
     onChange(trimmed);
@@ -51,7 +94,6 @@ function IconPicker({ value, onChange }) {
 
   return (
     <div>
-      {/* Built-in grid */}
       <div className="icon-picker">
         {FACILITY_ICONS.map((ico) => (
           <button
@@ -66,7 +108,6 @@ function IconPicker({ value, onChange }) {
         ))}
       </div>
 
-      {/* Custom icon toggle */}
       <div style={{ marginTop: 10, marginBottom: 16 }}>
         {!customMode ? (
           <button
@@ -133,7 +174,7 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
       const payload = {
         name:        form.name.trim(),
         description: form.description.trim(),
-        icon:        form.icon,   // ← always sent
+        icon:        form.icon,
       };
       if (isEdit) {
         await FacilityAPI.update(facility.id, payload);
@@ -154,11 +195,13 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-
         <div className="modal__header">
-          <h2 className="modal__title">
-            {isEdit ? "✏️ Edit Facility" : "🔧 New Facility"}
-          </h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="modal__facility-icon-wrap">
+              <FacilityIcon size={20} color="#2563EB" />
+            </div>
+            <h2 className="modal__title">{isEdit ? "Edit Facility" : "New Facility"}</h2>
+          </div>
           <button className="modal__close" onClick={onClose}>✕</button>
         </div>
         <p className="modal__subtitle">
@@ -171,7 +214,6 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
           </div>
         )}
 
-        {/* Icon picker */}
         <label className="form-label">Choose Icon</label>
         <IconPicker
           value={form.icon}
@@ -190,7 +232,6 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
           </span>
         </div>
 
-        {/* Name */}
         <label className="form-label" htmlFor="fac-name">Facility Name *</label>
         <input id="fac-name"
           className="form-input form-input--blue"
@@ -198,7 +239,6 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
           value={form.name} onChange={set("name")} onKeyDown={handleKey}
         />
 
-        {/* Description */}
         <label className="form-label" htmlFor="fac-desc">Description</label>
         <input id="fac-desc"
           className="form-input"
@@ -213,7 +253,6 @@ function FacilityModal({ mode, facility, onClose, onSaved }) {
             {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Facility"}
           </button>
         </div>
-
       </div>
     </div>
   );
@@ -297,7 +336,7 @@ export default function FacilityManagement() {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState("");
   const [search,       setSearch]       = useState("");
-  const [usageFilter,  setUsageFilter]  = useState("all"); // all | used | unused
+  const [usageFilter,  setUsageFilter]  = useState("all");
   const [sortBy,       setSortBy]       = useState("name");
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
@@ -312,8 +351,6 @@ export default function FacilityManagement() {
       const roomList = roomsRes.status === "fulfilled" ? (roomsRes.value?.items ?? roomsRes.value ?? []) : [];
       setFacilities(facList);
 
-      // ── Build usageMap: facilityId → room count ──────────────────
-      // FIX: backend now returns [{facilityId, name, icon}] instead of [string]
       const counts = {};
       facList.forEach((f) => { counts[f.id] = 0; });
 
@@ -322,12 +359,10 @@ export default function FacilityManagement() {
           const roomFacs = await RoomFacilityAPI.getByRoom(room.id);
           if (Array.isArray(roomFacs)) {
             roomFacs.forEach((rf) => {
-              // Handle both object shape {facilityId} and legacy string shape
               let fid;
               if (typeof rf === "object" && rf !== null) {
                 fid = rf.facilityId ?? rf.facility?.id ?? rf.id;
               }
-              // Skip plain strings — they carry no ID
               if (fid !== undefined && fid !== null) {
                 counts[fid] = (counts[fid] || 0) + 1;
               }
@@ -343,7 +378,6 @@ export default function FacilityManagement() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── Filter + sort → reset page ───────────────────────────────
   useEffect(() => {
     let list = [...facilities];
 
@@ -381,10 +415,11 @@ export default function FacilityManagement() {
   const handleSaved   = () => { closeModal(); fetchAll(); };
   const handleDeleted = () => { closeModal(); fetchAll(); };
 
-  // ── Stat card click → toggle filter ──────────────────────────
-  const handleStatClick = (filterValue) => {
+  const handleUsageStatClick = (filterValue) =>
     setUsageFilter((prev) => prev === filterValue ? "all" : filterValue);
-  };
+
+  const hasFilters = search || usageFilter !== "all";
+  const clearAll   = () => { setSearch(""); setUsageFilter("all"); };
 
   return (
     <div className="facility-page">
@@ -392,69 +427,42 @@ export default function FacilityManagement() {
       {/* ── Header ── */}
       <div className="facility-page__header">
         <div>
-          <h2 className="facility-page__title">🔧 Facility Management</h2>
+          <h2 className="facility-page__title">
+            <span className="facility-page__title-icon">
+              <FacilityIcon size={26} color="#2563EB" />
+            </span>
+            Facility Management
+          </h2>
           <p className="facility-page__sub">Manage facilities and their room assignments</p>
         </div>
         <button className="btn-add-facility" onClick={openAdd}><span>+</span> Add Facility</button>
       </div>
 
-      {/* ── Summary stats (CLICKABLE) ── */}
-      <div className="facility-stats">
-
-        {/* Total — clicking clears filter */}
-        <div
-          className={`facility-stat-card facility-stat-card--clickable${usageFilter === "all" ? " facility-stat-card--active" : ""}`}
-          onClick={() => setUsageFilter("all")}
-          title="Show all facilities"
-        >
-          <div className="facility-stat-card__icon facility-stat-card__icon--blue">🔧</div>
-          <div>
-            <div className="facility-stat-card__value">{facilities.length}</div>
-            <div className="facility-stat-card__label">Total Facilities</div>
-          </div>
-          {usageFilter === "all" && <span className="stat-active-dot" />}
-        </div>
-
-        {/* In Use */}
-        <div
-          className={`facility-stat-card facility-stat-card--clickable${usageFilter === "used" ? " facility-stat-card--active facility-stat-card--active-green" : ""}`}
-          onClick={() => handleStatClick("used")}
-          title="Filter: In Use only"
-        >
-          <div className="facility-stat-card__icon facility-stat-card__icon--green">✅</div>
-          <div>
-            <div className="facility-stat-card__value">{totalUsed}</div>
-            <div className="facility-stat-card__label">In Use</div>
-          </div>
-          {usageFilter === "used" && <span className="stat-active-dot stat-active-dot--green" />}
-        </div>
-
-        {/* Room Assignments */}
-        <div
-          className="facility-stat-card"
-          title="Total room–facility assignments"
-        >
-          <div className="facility-stat-card__icon facility-stat-card__icon--yellow">🚪</div>
-          <div>
-            <div className="facility-stat-card__value">{totalRoomAssignments}</div>
-            <div className="facility-stat-card__label">Room Assignments</div>
-          </div>
-        </div>
-
-        {/* Unused — NEW clickable card */}
-        <div
-          className={`facility-stat-card facility-stat-card--clickable${usageFilter === "unused" ? " facility-stat-card--active facility-stat-card--active-red" : ""}`}
-          onClick={() => handleStatClick("unused")}
-          title="Filter: Unused only"
-        >
-          <div className="facility-stat-card__icon facility-stat-card__icon--red">⭕</div>
-          <div>
-            <div className="facility-stat-card__value">{totalUnused}</div>
-            <div className="facility-stat-card__label">Unused</div>
-          </div>
-          {usageFilter === "unused" && <span className="stat-active-dot stat-active-dot--red" />}
-        </div>
-
+      {/* ── Stat Cards ── */}
+      <div className="facility-stats-grid">
+        <StatCard
+          value={loading ? "—" : facilities.length} label="Total Facilities"
+          icon={<FacilityIcon size={20} color="#2563EB" />}
+          color="#2563EB" border="rgba(59,130,246,0.18)"
+          onClick={() => { setUsageFilter("all"); setSearch(""); }}
+          active={usageFilter === "all" && search === ""}
+        />
+        <StatCard
+          value={loading ? "—" : totalUsed} label="In Use" icon="✅"
+          color="#065F46" border="rgba(22,163,74,0.20)"
+          onClick={() => handleUsageStatClick("used")}
+          active={usageFilter === "used"}
+        />
+        <StatCard
+          value={loading ? "—" : totalRoomAssignments} label="Room Assignments" icon="🚪"
+          color="#92400E" border="rgba(217,119,6,0.20)"
+        />
+        <StatCard
+          value={loading ? "—" : totalUnused} label="Unused" icon="⭕"
+          color="#DC2626" border="rgba(220,38,38,0.18)"
+          onClick={() => handleUsageStatClick("unused")}
+          active={usageFilter === "unused"}
+        />
       </div>
 
       {/* ── Toolbar ── */}
@@ -468,7 +476,7 @@ export default function FacilityManagement() {
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button className="facility-search__clear" onClick={() => setSearch("")} title="Clear search">✕</button>
+            <button className="facility-search__clear" onClick={() => setSearch("")}>✕</button>
           )}
         </div>
         <select className="facility-filter-select" value={usageFilter}
@@ -483,14 +491,8 @@ export default function FacilityManagement() {
           <option value="usage-desc">Sort: Most Used</option>
           <option value="usage-asc">Sort: Least Used</option>
         </select>
-        {(search || usageFilter !== "all") && (
-          <button
-            className="facility-clear-all-btn"
-            onClick={() => { setSearch(""); setUsageFilter("all"); }}
-            title="Clear all filters"
-          >
-            ✕ Clear all
-          </button>
+        {hasFilters && (
+          <button className="facility-clear-btn" onClick={clearAll}>✕ Clear</button>
         )}
         <span className="facility-count-badge">
           {filtered.length} {filtered.length === 1 ? "facility" : "facilities"}
@@ -502,19 +504,20 @@ export default function FacilityManagement() {
       {/* ── Table panel ── */}
       <div className="facility-panel">
         {loading ? (
-          <div className="facility-loading"><div className="facility-spinner" /><p>Loading facilities...</p></div>
+          <div className="facility-loading">
+            <div className="facility-spinner" />
+            <p>Loading facilities...</p>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="facility-empty">
-            <div className="facility-empty__icon">🔧</div>
+            <div className="facility-empty__icon">
+              <FacilityIcon size={52} color="#CBD5E1" />
+            </div>
             <div className="facility-empty__title">
-              {search || usageFilter !== "all" ? "No facilities match your filters" : "No facilities yet"}
+              {hasFilters ? "No facilities match your filters" : "No facilities yet"}
             </div>
             <div className="facility-empty__sub">
-              {search || usageFilter !== "all" ? (
-                <button className="facility-empty__reset" onClick={() => { setSearch(""); setUsageFilter("all"); }}>
-                  Clear filters
-                </button>
-              ) : "Click 'Add Facility' to get started"}
+              {hasFilters ? "Try clearing your filters" : "Click 'Add Facility' to get started"}
             </div>
           </div>
         ) : (
@@ -532,16 +535,22 @@ export default function FacilityManagement() {
               <tbody>
                 {paginated.map((f, i) => (
                   <tr key={f.id}>
-                    <td><span className="facility-table__num">{(page - 1) * PAGE_SIZE + i + 1}</span></td>
                     <td>
-                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                        <div className="facility-table__icon" style={{ background:"rgba(239,246,255,0.8)" }}>
+                      <span className="facility-table__num">{(page - 1) * PAGE_SIZE + i + 1}</span>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div className="facility-table__icon" style={{ background: "rgba(239,246,255,0.8)" }}>
                           {f.icon || "🔧"}
                         </div>
                         <div className="facility-table__name">{f.name}</div>
                       </div>
                     </td>
-                    <td><span className="facility-table__desc">{f.description || <span style={{ color:"#CBD5E1" }}>—</span>}</span></td>
+                    <td>
+                      <span className="facility-table__desc">
+                        {f.description || <span style={{ color: "#CBD5E1" }}>—</span>}
+                      </span>
+                    </td>
                     <td><UsagePill count={usageMap[f.id] || 0} /></td>
                     <td>
                       <div className="facility-table__actions">

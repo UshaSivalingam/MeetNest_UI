@@ -1,21 +1,18 @@
 // src/context/AuthContext.jsx
-
 import { createContext, useContext, useState, useEffect } from "react";
 import { AuthAPI } from "../api/authAPI";
 import { TokenService, UserService } from "../api/apiConfig";
 
 const AuthContext = createContext(null);
 
-// ─── PROVIDER ─────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
-  const [user,    setUser]    = useState(null);
+  const [user,    setUser]    = useState(undefined);
   const [loading, setLoading] = useState(true);
 
-  // Restore session on first load
   useEffect(() => {
     const savedUser = UserService.get();
     const token     = TokenService.get();
-    if (savedUser && token) setUser(savedUser);
+    setUser((savedUser && token) ? savedUser : null);
     setLoading(false);
   }, []);
 
@@ -30,22 +27,24 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // "Employee" → "employee", "Admin" → "admin"
+  const role       = user?.role?.trim().toLowerCase() ?? null;
+  const isAdmin    = role === "admin";
+  const isEmployee = role === "employee";
+
+  console.log("🔐 AUTH:", { role, isAdmin, isEmployee, loading, userExists: !!user });
+
   return (
     <AuthContext.Provider value={{
-      user,
-      loading,
+      user, loading, role, isAdmin, isEmployee,
       isLoggedIn: !!user && !!TokenService.get(),
-      isAdmin:    user?.role?.toLowerCase() === "admin",
-      isEmployee: user?.role?.toLowerCase() === "employee",
-      login,
-      logout,
+      login, logout,
     }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// ─── HOOK ─────────────────────────────────────────────────────────
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");

@@ -1,20 +1,64 @@
-// src/api/adminAPI.js
 import { ROUTES, request } from "./apiConfig";
 
 export const AdminAPI = {
-  getDashboard: () => request(ROUTES.admin.dashboard),
-  getBookings: () => request(ROUTES.admin.bookings),
-  getBookingById: (id) => request(ROUTES.admin.bookingById(id)),
 
-  approveBooking: (id, body = {}) =>
-    request(ROUTES.admin.approveBooking(id), {
+  getDashboard: async () => {
+    console.log("📊 Fetching Admin Dashboard");
+    debugger;
+
+    const data = await request(ROUTES.admin.dashboard);
+
+    console.log("📊 Dashboard Data:", data);
+    return data;
+  },
+
+  getBookings: async () => {
+    console.log("📅 Fetching Admin Bookings");
+    debugger;
+
+    const data = await request(ROUTES.admin.bookings + "?pageSize=1000");
+
+    console.log("📅 Bookings Data:", data);
+    return data;
+  },
+
+  getBookingById: async (id) => {
+    console.log("🔍 Fetch Booking By ID:", id);
+    debugger;
+
+    const data = await request(ROUTES.admin.bookingById(id));
+
+    console.log("📄 Booking Detail:", data);
+    return data;
+  },
+
+  approveBooking: async (id, body = {}) => {
+    console.log("✅ Approving Booking:", id);
+    console.log("Body:", body);
+
+    debugger;
+
+    const data = await request(ROUTES.admin.approveBooking(id), {
       method: "PUT",
       body: JSON.stringify(body),
-    }),
+    });
 
-  rejectBooking: (id, body = {}) =>
-    request(ROUTES.admin.rejectBooking(id), {
+    console.log("✅ Booking Approved:", data);
+    return data;
+  },
+
+  rejectBooking: async (id, body = {}) => {
+    console.log("❌ Rejecting Booking:", id);
+    console.log("Body:", body);
+
+    debugger;
+
+    const data = await request(ROUTES.admin.rejectBooking(id), {
       method: "PUT",
       body: JSON.stringify(body),
-    }),
+    });
+
+    console.log("❌ Booking Rejected:", data);
+    return data;
+  },
 };

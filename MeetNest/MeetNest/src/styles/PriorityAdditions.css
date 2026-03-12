@@ -12,10 +12,15 @@
   font-weight: 600;
   letter-spacing: 0.3px;
 }
-.priority-badge--high {
+/*.priority-badge--high {
   background: rgba(239, 68, 68, 0.1);
   color: #DC2626;
   border: 1px solid rgba(239, 68, 68, 0.25);
+}*/
+.priority-badge--high {
+  background: rgba(249, 115, 22, 0.1);
+  color: #F97316;
+  border: 1px solid rgba(249, 115, 22, 0.25);
 }
 .priority-badge--medium {
   background: rgba(234, 179, 8, 0.1);

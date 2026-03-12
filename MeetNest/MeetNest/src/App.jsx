@@ -1,5 +1,4 @@
 // src/App.jsx
-
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute     from "./routes/ProtectedRoute";
@@ -35,7 +34,6 @@ function ComingSoon({ pageName }) {
   );
 }
 
-// ─── ACCESS DENIED ────────────────────────────────────────────────
 function AccessDenied() {
   return (
     <div style={{
@@ -55,45 +53,53 @@ function AccessDenied() {
   );
 }
 
-// ─── PAGE ROUTER ──────────────────────────────────────────────────
+// ─── PAGE CONTENT ─────────────────────────────────────────────────
 function PageContent({ currentPage, onNavigate }) {
-  const { isAdmin, isEmployee } = useAuth();
+  const { isAdmin, isEmployee, loading, user } = useAuth();
 
-  // ── Admin-only pages ──
-  if (currentPage === "dashboard"  && isAdmin) return <AdminDashboard   onNavigate={onNavigate} />;
-  if (currentPage === "branches"   && isAdmin) return <BranchManagement />;
-  if (currentPage === "rooms"      && isAdmin) return <RoomManagement />;
-  if (currentPage === "facilities" && isAdmin) return <FacilityManagement />;
-  if (currentPage === "bookings"   && isAdmin) return <AdminBookings />;
+  if (loading || user === undefined) return null;
+  if (user && !isAdmin && !isEmployee) return null;
 
-  // ── Employee-only pages ──
-  if (currentPage === "dashboard"    && isEmployee) return <EmployeeDashboard onNavigate={onNavigate} />;
-  if (currentPage === "browse-rooms" && isEmployee) return <BrowseRooms       onNavigate={onNavigate} />;
-  if (currentPage === "my-bookings"  && isEmployee) return <MyBookings        onNavigate={onNavigate} />;
+  if (isAdmin) {
+    if (currentPage === "dashboard")  return <AdminDashboard   onNavigate={onNavigate} />;
+    if (currentPage === "branches")   return <BranchManagement />;
+    if (currentPage === "rooms")      return <RoomManagement />;
+    if (currentPage === "facilities") return <FacilityManagement />;
+    if (currentPage === "bookings")   return <AdminBookings />;
+    return <AccessDenied />;
+  }
 
-  // ── Wrong role ──
-  if (isAdmin    && ["browse-rooms","my-bookings"].includes(currentPage)) return <AccessDenied />;
-  if (isEmployee && ["branches","rooms","facilities","bookings"].includes(currentPage)) return <AccessDenied />;
+  if (isEmployee) {
+    if (currentPage === "dashboard")    return <EmployeeDashboard onNavigate={onNavigate} />;
+    if (currentPage === "browse-rooms") return <BrowseRooms       onNavigate={onNavigate} />;
+    if (currentPage === "my-bookings")  return <MyBookings        onNavigate={onNavigate} />;
+    return <AccessDenied />;
+  }
 
-  return <ComingSoon pageName={currentPage} />;
+  return null;
 }
 
 // ─── INNER APP ────────────────────────────────────────────────────
-
 function InnerApp() {
-  const { isLoggedIn } = useAuth();
-  const [page, setPage] = useState("welcome");
+  const { isLoggedIn, loading, user } = useAuth();
+  const [page,        setPage]        = useState("welcome");
   const [currentPage, setCurrentPage] = useState("dashboard");
 
+  // Navigate to app when logged in
   useEffect(() => {
-    if (isLoggedIn && page !== "app") {
+    if (!loading && user !== undefined && isLoggedIn && page !== "app") {
       setPage("app");
     }
-  }, [isLoggedIn, page]);
+  }, [isLoggedIn, loading, user, page]);
 
-  if (page === "welcome") {
-    return <WelcomePage onFinish={() => setPage("login")} />;
-  }
+  // ✅ Reset to dashboard whenever user changes (handles role switch between sessions)
+  useEffect(() => {
+    setCurrentPage("dashboard");
+  }, [user]);
+
+  if (loading || user === undefined) return null;
+
+  if (page === "welcome") return <WelcomePage onFinish={() => setPage("login")} />;
 
   if (page === "login") {
     return (
@@ -104,9 +110,7 @@ function InnerApp() {
     );
   }
 
-  if (page === "signup") {
-    return <SignupPage onBack={() => setPage("login")} />;
-  }
+  if (page === "signup") return <SignupPage onBack={() => setPage("login")} />;
 
   if (page === "app") {
     return (

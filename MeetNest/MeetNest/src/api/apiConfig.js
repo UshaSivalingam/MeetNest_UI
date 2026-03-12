@@ -1,4 +1,5 @@
 // src/api/apiConfig.js
+
 const BASE_URL = "https://localhost:7198/api";
 
 export const ROUTES = {
@@ -10,21 +11,22 @@ export const ROUTES = {
   },
   branch: {
     getAll:       `${BASE_URL}/branches`,
-    getWithStats: `${BASE_URL}/branches/stats`,           // ← ADD (Bug 1 fix)
+    getWithStats: `${BASE_URL}/branches/stats`,
     getSimple:    `${BASE_URL}/branches/simple`,
-    getById: (id) => `${BASE_URL}/branches/${id}`,
-    create:  `${BASE_URL}/branches`,
-    update:  (id) => `${BASE_URL}/branches/${id}`,
-    delete:  (id) => `${BASE_URL}/branches/${id}`,
+    getById:      (id) => `${BASE_URL}/branches/${id}`,
+    create:       `${BASE_URL}/branches`,
+    update:       (id) => `${BASE_URL}/branches/${id}`,
+    delete:       (id) => `${BASE_URL}/branches/${id}`,
   },
   room: {
-    getAll:        `${BASE_URL}/rooms`,
-    getByBranch:   (branchId) => `${BASE_URL}/rooms/branch/${branchId}`,
-    getById:       (id)       => `${BASE_URL}/rooms/${id}`,
-    create:        `${BASE_URL}/rooms`,
-    update:        (id)       => `${BASE_URL}/rooms/${id}`,
-    delete:        (id)       => `${BASE_URL}/rooms/${id}`,
-    employeeRooms: `${BASE_URL}/rooms/employee`,
+    getAll:          `${BASE_URL}/rooms`,
+    getByBranch:     (branchId) => `${BASE_URL}/rooms/branch/${branchId}`,
+    getById:         (id)       => `${BASE_URL}/rooms/${id}`,
+    create:          `${BASE_URL}/rooms`,
+    update:          (id)       => `${BASE_URL}/rooms/${id}`,
+    delete:          (id)       => `${BASE_URL}/rooms/${id}`,
+    employeeRooms:   `${BASE_URL}/rooms/employee`,
+    activeBookings:  (id)       => `${BASE_URL}/rooms/${id}/active-bookings`,
   },
   facility: {
     getAll:  `${BASE_URL}/facilities`,
@@ -52,9 +54,16 @@ export const ROUTES = {
     approveBooking: (id) => `${BASE_URL}/admin/bookings/${id}/approve`,
     rejectBooking:  (id) => `${BASE_URL}/admin/bookings/${id}/reject`,
   },
+  notification: {
+    getDue:      `${BASE_URL}/notifications`,
+    getCount:    `${BASE_URL}/notifications/count`,
+    markRead:    (id) => `${BASE_URL}/notifications/${id}/read`,
+    markAllRead: `${BASE_URL}/notifications/read-all`,
+    reminder:    `${BASE_URL}/notifications/reminder`,
+  },
 };
 
-// ---------------- TOKEN & USER ----------------
+// ── TOKEN & USER ──────────────────────────────────────────────────
 export const TokenService = {
   get:        ()      => localStorage.getItem("accessToken"),
   set:        (token) => localStorage.setItem("accessToken", token),
@@ -73,7 +82,7 @@ export const UserService = {
   remove: ()     => localStorage.removeItem("user"),
 };
 
-// ---------------- CORE REQUEST ----------------
+// ── CORE REQUEST ──────────────────────────────────────────────────
 export async function request(url, options = {}) {
   const token = TokenService.get();
   const config = {
@@ -102,7 +111,6 @@ export async function request(url, options = {}) {
 
     return handleResponse(response);
   } catch (err) {
-    console.error("Network error:", err);
     throw new Error(`Cannot reach server. Is backend running at ${BASE_URL}?`);
   }
 }
@@ -117,17 +125,14 @@ async function handleResponse(response) {
   } catch {}
 
   if (!response.ok) {
-    console.error("❌ Backend Error Status:", response.status);
-    console.error("❌ Backend Error Body:", data);
     throw new Error(
       typeof data === "string"
         ? data
-        : data?.message || data?.Message || data?.title || `Error ${response.status}`
+        : data?.error || data?.message || data?.Message || data?.title || `Error ${response.status}`
     );
   }
 
   // Unwrap PagedResult { items: [...], totalCount, page, pageSize }
-  // but only when items is an array — plain arrays and plain objects pass through as-is
   if (isJson && data && typeof data === "object" && Array.isArray(data.items)) {
     return data.items;
   }

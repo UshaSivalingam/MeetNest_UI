@@ -48,6 +48,27 @@ function isUpcoming(iso) {
   return iso && new Date(iso) > new Date();
 }
 
+// ─── STAT CARD — visual-only (no filter behavior) ────────────────
+function StatCard({ value, label, icon, color, border }) {
+  return (
+    <div className="emp-stat-card" style={{ borderColor: border }}>
+      {/* Glow blob top-right */}
+      <div className="emp-stat-card__glow" style={{ background: color }} />
+
+      {/* Icon */}
+      <div className="emp-stat-card__icon" style={{ background: `${color}1a`, color }}>
+        {icon}
+      </div>
+
+      {/* Value + label */}
+      <div className="emp-stat-card__info">
+        <div className="emp-stat-card__value" style={{ color }}>{value}</div>
+        <div className="emp-stat-card__label">{label}</div>
+      </div>
+    </div>
+  );
+}
+
 // ─── QUICK BOOKING MODAL ─────────────────────────────────────────
 function BookModal({ room, onClose, onBooked }) {
   const [start,   setStart]   = useState(defaultStart());
@@ -93,7 +114,6 @@ function BookModal({ room, onClose, onBooked }) {
           <button className="emp-modal__close" onClick={onClose}>✕</button>
         </div>
 
-        {/* Room info */}
         <div className="emp-modal__room-card">
           <div className="emp-modal__room-name">🚪 {room.name}</div>
           <div className="emp-modal__room-meta">
@@ -108,14 +128,12 @@ function BookModal({ room, onClose, onBooked }) {
           </div>
         )}
 
-        {/* Start time */}
         <div className="form-group">
           <label className="form-label">Start Time *</label>
           <input className="form-input form-input--green" type="datetime-local"
             value={start} onChange={(e) => setStart(e.target.value)} />
         </div>
 
-        {/* End time */}
         <div className="form-group">
           <label className="form-label">End Time *</label>
           <input className="form-input form-input--green" type="datetime-local"
@@ -127,7 +145,6 @@ function BookModal({ room, onClose, onBooked }) {
           )}
         </div>
 
-        {/* Purpose */}
         <div className="form-group">
           <label className="form-label">Purpose *</label>
           <input className="form-input" type="text"
@@ -197,23 +214,17 @@ export default function EmployeeDashboard({ onNavigate }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  // ── State ─────────────────────────────────────────────────────
-  const [rooms,       setRooms]       = useState([]);
-  const [bookings,    setBookings]    = useState([]);
-  const [loadRooms,   setLoadRooms]   = useState(true);
-  const [loadBk,      setLoadBk]      = useState(true);
-  const [roomSearch,  setRoomSearch]  = useState("");
-  const [capFilter,   setCapFilter]   = useState("");
-  const [facFilter,   setFacFilter]   = useState("");
-  const [modal,       setModal]       = useState(null);  // { type:"book"|"detail", data }
+  const [rooms,    setRooms]    = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [loadRooms,setLoadRooms]= useState(true);
+  const [loadBk,   setLoadBk]   = useState(true);
+  const [modal,    setModal]    = useState(null);
 
-  // ── Fetch ──────────────────────────────────────────────────────
   const fetchRooms = useCallback(async () => {
     setLoadRooms(true);
     try {
       const data = await RoomAPI.getEmployeeRooms();
-      const list = Array.isArray(data) ? data : (data?.items ?? []);
-      setRooms(list);
+      setRooms(Array.isArray(data) ? data : (data?.items ?? []));
     } catch { setRooms([]); }
     finally { setLoadRooms(false); }
   }, []);
@@ -222,67 +233,41 @@ export default function EmployeeDashboard({ onNavigate }) {
     setLoadBk(true);
     try {
       const data = await BookingAPI.myBookings();
-      const list = Array.isArray(data) ? data : (data?.items ?? []);
-      setBookings(list);
+      setBookings(Array.isArray(data) ? data : (data?.items ?? []));
     } catch { setBookings([]); }
     finally { setLoadBk(false); }
   }, []);
 
   useEffect(() => { fetchRooms(); fetchBookings(); }, [fetchRooms, fetchBookings]);
 
-  // ── Stats ──────────────────────────────────────────────────────
   const stats = useMemo(() => ({
-    rooms:     rooms.length,
-    total:     bookings.length,
-    pending:   bookings.filter(b => b.status?.toLowerCase() === "pending").length,
-    approved:  bookings.filter(b => b.status?.toLowerCase() === "approved").length,
-    rejected:  bookings.filter(b => b.status?.toLowerCase() === "rejected").length,
+    rooms:    rooms.length,
+    total:    bookings.length,
+    pending:  bookings.filter(b => b.status?.toLowerCase() === "pending").length,
+    approved: bookings.filter(b => b.status?.toLowerCase() === "approved").length,
+    rejected: bookings.filter(b => b.status?.toLowerCase() === "rejected").length,
   }), [rooms, bookings]);
 
-  // ── All unique facilities for filter dropdown ──────────────────
-  const allFacilities = useMemo(() => {
-    const set = new Set();
-    rooms.forEach(r => (r.facilities || []).forEach(f => set.add(f.name || f)));
-    return [...set].sort();
-  }, [rooms]);
-
-  // ── Filtered rooms ─────────────────────────────────────────────
-  const filteredRooms = useMemo(() => {
-    let list = [...rooms];
-    if (roomSearch.trim()) {
-      const q = roomSearch.toLowerCase();
-      list = list.filter(r =>
-        r.name?.toLowerCase().includes(q) ||
-        r.branchName?.toLowerCase().includes(q));
-    }
-    if (capFilter) {
-      const cap = parseInt(capFilter, 10);
-      list = list.filter(r => r.capacity >= cap);
-    }
-    if (facFilter) {
-      list = list.filter(r =>
-        (r.facilities || []).some(f => (f.name || f) === facFilter));
-    }
-    return list;
-  }, [rooms, roomSearch, capFilter, facFilter]);
-
-  // ── Recent bookings (last 6, most recent first) ─────────────────
   const recentBookings = useMemo(() =>
     [...bookings]
       .sort((a, b) => new Date(b.startTime || 0) - new Date(a.startTime || 0))
       .slice(0, 8),
     [bookings]);
 
-  // ── Upcoming approved bookings ─────────────────────────────────
   const upcoming = useMemo(() =>
     bookings.filter(b =>
       b.status?.toLowerCase() === "approved" && isUpcoming(b.startTime)),
     [bookings]);
 
-  const handleBooked = () => {
-    setModal(null);
-    fetchBookings();
-  };
+  const handleBooked = () => { setModal(null); fetchBookings(); };
+
+  const STAT_DEFS = [
+    { key:"rooms",    icon:"🚪", label:"Available Rooms", color:"#2563EB", border:"rgba(59,130,246,0.18)"  },
+    { key:"total",    icon:"📋", label:"Total Bookings",  color:"#7C3AED", border:"rgba(124,58,237,0.18)"  },
+    { key:"pending",  icon:"⏳", label:"Pending",         color:"#CA8A04", border:"rgba(217,119,6,0.20)"   },
+    { key:"approved", icon:"✅", label:"Approved",        color:"#065F46", border:"rgba(22,163,74,0.20)"   },
+    { key:"rejected", icon:"❌", label:"Rejected",        color:"#DC2626", border:"rgba(220,38,38,0.18)"   },
+  ];
 
   return (
     <div className="emp-dash">
@@ -310,25 +295,17 @@ export default function EmployeeDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ── Stats ── */}
-      <div className="emp-stats">
-        {[
-          { key:"rooms",    icon:"🚪", label:"Available Rooms", cls:"rooms"   },
-          { key:"total",    icon:"📋", label:"Total Bookings",  cls:"total"   },
-          { key:"pending",  icon:"⏳", label:"Pending",         cls:"pending" },
-          { key:"approved", icon:"✅", label:"Approved",        cls:"approved"},
-          { key:"rejected", icon:"❌", label:"Rejected",        cls:"rejected"},
-        ].map(s => (
-          <div key={s.key} className="emp-stat">
-            <div className={`emp-stat__icon emp-stat__icon--${s.cls}`}>{s.icon}</div>
-            <div>
-              <div className={`emp-stat__value emp-stat__value--${s.cls}`}>
-                {(loadRooms && s.key === "rooms") || (loadBk && s.key !== "rooms")
-                  ? "—" : stats[s.key]}
-              </div>
-              <div className="emp-stat__label">{s.label}</div>
-            </div>
-          </div>
+      {/* ── Stat Cards ── */}
+      <div className="emp-stats-grid">
+        {STAT_DEFS.map((s) => (
+          <StatCard
+            key={s.key}
+            value={(loadRooms && s.key === "rooms") || (loadBk && s.key !== "rooms") ? "—" : stats[s.key]}
+            label={s.label}
+            icon={s.icon}
+            color={s.color}
+            border={s.border}
+          />
         ))}
       </div>
 
@@ -395,17 +372,10 @@ export default function EmployeeDashboard({ onNavigate }) {
 
       {/* ── Modals ── */}
       {modal?.type === "book" && (
-        <BookModal
-          room={modal.data}
-          onClose={() => setModal(null)}
-          onBooked={handleBooked}
-        />
+        <BookModal room={modal.data} onClose={() => setModal(null)} onBooked={handleBooked} />
       )}
       {modal?.type === "detail" && (
-        <DetailModal
-          booking={modal.data}
-          onClose={() => setModal(null)}
-        />
+        <DetailModal booking={modal.data} onClose={() => setModal(null)} />
       )}
 
     </div>

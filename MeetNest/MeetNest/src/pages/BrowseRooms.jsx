@@ -122,7 +122,7 @@ function BookModal({ room, onClose, onBooked }) {
         notes:     form.notes?.trim() || null,
       };
       await BookingAPI.create(payload);
-      setAlert({ msg: "Booking request submitted! Awaiting admin approval.", type: "success" });
+      setAlert({ msg: "Booking request submitted!", type: "success" });
       setTimeout(() => onBooked(), 1500);
     } catch (e) {
       setAlert({ msg: e.message || "Something went wrong.", type: "error" });
@@ -243,11 +243,11 @@ function BrowseCard({ room, index, facilities, onBook }) {
 
         <div className="browse-card__top">
           <div className="browse-card__icon">🚪</div>
-          <span className={`browse-card__status-badge browse-card__status-badge--${status}`}>
+          {/*<span className={`browse-card__status-badge browse-card__status-badge--${status}`}>
             {status === "available"    ? "✅ Available"
               : status === "unavailable" ? "🚫 Unavailable"
               : "🔧 Maintenance"}
-          </span>
+          </span>*/}
         </div>
 
         <div className="browse-card__name">{room.name}</div>

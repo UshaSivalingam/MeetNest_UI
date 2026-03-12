@@ -13,8 +13,18 @@
 
 /* ── HEADER ─────────────────────────────────────────────────────── */
 .browse-page__header {
-  display: flex; align-items: center;
-  justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  flex-wrap:       wrap;
+  gap:             12px;
+
+  background:      rgba(255, 255, 255, 0.88);
+  border-radius:   20px;
+  padding:         20px 24px;
+  border:          1.5px solid rgba(59, 130, 246, 0.12);
+  backdrop-filter: blur(12px);
+  box-shadow:      0 4px 24px rgba(59, 130, 246, 0.07);
 }
 .browse-page__title {
   font-family: 'Work Sans', sans-serif; /* elegant heading */
@@ -62,7 +72,7 @@
   border:        1.5px solid rgba(34,197,94,0.25);
   background:    rgba(240,253,244,0.70);
   font-size:     13px;
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   color:         #1e3a5f;
   outline:       none;
   box-sizing:    border-box;
@@ -99,7 +109,7 @@
   border:        1.5px solid rgba(59,130,246,0.18);
   background:    rgba(255,255,255,0.85);
   font-size:     13px;
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   color:         #1e3a5f;
   outline:       none;
   cursor:        pointer;
@@ -113,7 +123,7 @@
 }
 .browse-filter-select::placeholder {
   color:       #94A3B8;
-  font-family: monospace;
+  font-family: 'Work Sans', sans-serif;
 }
 
 /* ── CLEAR ALL BUTTON ────────────────────────────────────────────── */
@@ -124,7 +134,7 @@
   background:     rgba(254,242,242,0.85);
   color:          #DC2626;
   font-size:      12px;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   font-weight:    bold;
   cursor:         pointer;
   white-space:    nowrap;
@@ -146,7 +156,7 @@
   border:         1.5px solid rgba(34,197,94,0.22);
   font-size:      12px;
   color:          #16A34A;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   letter-spacing: 0.8px;
   white-space:    nowrap;
   font-weight:    bold;
@@ -310,7 +320,7 @@
   min-width:      0;
 }
 .bk-room-info__name {
-  font-family: 'Georgia', serif;
+  font-family: 'Work Sans', sans-serif;
   font-size:   15px;
   font-weight: 600;
   color:       #1e3a5f;
@@ -324,7 +334,7 @@
   gap:         6px;
   font-size:   12px;
   color:       #64748B;
-  font-family: monospace;
+  font-family: 'Work Sans', sans-serif;
   flex-wrap:   wrap;
 }
 .bk-room-info__dot {
@@ -350,7 +360,7 @@
 /* Duration hint */
 .bk-hint {
   font-size:     12px;
-  font-family:   monospace;
+  font-family:   'Work Sans', sans-serif;
   color:         #16A34A;
   margin-bottom: 14px;
   margin-top:    4px;
@@ -377,7 +387,7 @@
   background:    linear-gradient(135deg, #3B82F6, #2563EB);
   color:         #fff;
   font-size:     13px;
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   font-weight:   bold;
   letter-spacing: 0.8px;
   cursor:        pointer;
@@ -422,7 +432,7 @@
   background:     rgba(254,242,242,0.80);
   color:          #DC2626;
   font-size:      12px;
-  font-family:    monospace;
+  font-family:    'Work Sans', sans-serif;
   font-weight:    bold;
   cursor:         pointer;
   white-space:    nowrap;
@@ -448,7 +458,7 @@
 .bk-room-info__icon    { font-size:24px; flex-shrink:0; line-height:1; }
 .bk-room-info__details { display:flex; flex-direction:column; gap:3px; min-width:0; }
 .bk-room-info__name {
-  font-family:   'Georgia', serif;
+  font-family:   'Work Sans', sans-serif;
   font-size:     15px;
   font-weight:   600;
   color:         #1e3a5f;
@@ -462,7 +472,7 @@
   gap:         6px;
   font-size:   12px;
   color:       #64748B;
-  font-family: monospace;
+  font-family: 'Work Sans', sans-serif;
   flex-wrap:   wrap;
 }
 .bk-room-info__dot { color: #CBD5E1; }
@@ -471,7 +481,7 @@
 .bk-time-col { flex:1; min-width:0; }
 .bk-time-col .form-input { width:100%; box-sizing:border-box; margin-bottom:0; }
 
-.bk-hint         { font-size:12px; font-family:monospace; color:#16A34A; margin-bottom:14px; margin-top:4px; }
+.bk-hint         { font-size:12px; font-family:'Work Sans', sans-serif; color:#16A34A; margin-bottom:14px; margin-top:4px; }
 .bk-hint--error  { color: #DC2626; }
 
 .form-label__opt { color:#CBD5E1; font-weight:400; margin-left:6px; text-transform:none; letter-spacing:0; }
@@ -484,7 +494,7 @@
   background:     linear-gradient(135deg, #3B82F6, #2563EB);
   color:          #fff;
   font-size:      13px;
-  font-family:    'Georgia', serif;
+  font-family:    'Work Sans', sans-serif;
   font-weight:    bold;
   letter-spacing: 0.8px;
   cursor:         pointer;

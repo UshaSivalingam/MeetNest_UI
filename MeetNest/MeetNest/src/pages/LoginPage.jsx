@@ -8,7 +8,7 @@ import { TokenService } from "../api/apiConfig";
 import "../styles/LoginPage.css";
 
 export default function LoginPage({ onLoginSuccess, onSignup }) {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
 
   const [visible,  setVisible]  = useState(false);
   const [role,     setRole]     = useState("employee");
@@ -29,70 +29,56 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
   };
 
   const handleLogin = async () => {
-  setAlert({ message: "", type: "" });
+    setAlert({ message: "", type: "" });
 
-  if (!email.trim())
-    return setAlert({ message: "Email is required.", type: "error" });
+    if (!email.trim())
+      return setAlert({ message: "Email is required.", type: "error" });
+    if (!password)
+      return setAlert({ message: "Password is required.", type: "error" });
 
-  if (!password)
-    return setAlert({ message: "Password is required.", type: "error" });
+    setLoading(true);
 
-  setLoading(true);
+    try {
+      const data = await login({ email, password });
+      const userRole = data?.user?.role?.trim().toLowerCase();
 
-  try {
-    const data = await login({ email, password });
+      // ── Role tab mismatch checks ──────────────────────────────
+      if (role === "admin" && userRole !== "admin") {
+        // ✅ Use logout() so AuthContext state is also cleared, not just localStorage
+        logout();
+        return setAlert({
+          message: "Access denied. This account is not an Admin.",
+          type: "error",
+        });
+      }
 
-    // 🔎 DEBUG LOGS
-    console.log("========= LOGIN DEBUG START =========");
-    console.log("Full Response:", data);
-    console.log("User Object:", data?.user);
-    console.log("User Role (raw):", data?.user?.role);
-    console.log("Selected Tab Role:", role);
-    console.log("=====================================");
+      if (role === "employee" && userRole === "admin") {
+        logout();
+        return setAlert({
+          message: "Please use the Admin tab to sign in.",
+          type: "error",
+        });
+      }
 
-    debugger; // 👈 Execution will pause here in DevTools
-
-    const userRole = data?.user?.role?.toLowerCase();
-
-    console.log("User Role (after toLowerCase):", userRole);
-
-    if (role === "admin" && userRole !== "admin") {
-      console.log("❌ Blocked: Not an Admin");
-      TokenService.clear();
-      return setAlert({
-        message: "Access denied. This account is not an Admin.",
-        type: "error"
+      // ── Success ───────────────────────────────────────────────
+      setAlert({
+        message: `Welcome back, ${data?.user?.fullName || email}!`,
+        type: "success",
       });
-    }
 
-    if (role === "employee" && userRole === "admin") {
-      console.log("❌ Blocked: Admin trying Employee tab");
-      TokenService.clear();
-      return setAlert({
-        message: "Please use the Admin tab to sign in.",
-        type: "error"
+      // ✅ No setTimeout — call immediately so there's no window
+      //    where page="app" but token is missing
+      onLoginSuccess?.(data?.user);
+
+    } catch (err) {
+      setAlert({
+        message: err.message || "Login failed. Check your credentials.",
+        type: "error",
       });
+    } finally {
+      setLoading(false);
     }
-
-    console.log("✅ Login Passed Role Check");
-
-    setAlert({
-      message: `Welcome back, ${data?.user?.fullName || email}!`,
-      type: "success"
-    });
-
-    setTimeout(() => onLoginSuccess?.(data?.user), 1000);
-
-  } catch (err) {
-    console.log("🔥 Login Error:", err);
-    setAlert({
-      message: err.message || "Login failed. Check your credentials.",
-      type: "error"
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleKeyDown = (e) => { if (e.key === "Enter") handleLogin(); };
 
@@ -110,7 +96,7 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
         {/* Role toggle */}
         <div className="login-role-toggle">
           <button
-            className={`login-role-btn${role === "admin"    ? " login-role-btn--active-admin"    : ""}`}
+            className={`login-role-btn${role === "admin" ? " login-role-btn--active-admin" : ""}`}
             onClick={() => handleRoleChange("admin")}
           >
             🏢 Admin
