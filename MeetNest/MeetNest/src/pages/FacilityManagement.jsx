@@ -1,5 +1,3 @@
-// src/pages/FacilityManagement.jsx
-
 import { useState, useEffect, useCallback } from "react";
 import { FacilityAPI } from "../api/facilityAPI";
 import { RoomFacilityAPI } from "../api/RoomFacilityAPI";

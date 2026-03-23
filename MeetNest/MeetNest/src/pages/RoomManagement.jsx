@@ -1,11 +1,3 @@
-// src/pages/RoomManagement.jsx
-// ── REPLACE your existing file entirely ──
-// Changes from previous version:
-//   1. DeleteModal: checks active bookings BEFORE showing delete confirmation
-//   2. Shows ProtectedRoomModal when room has active bookings
-//   3. Admin can set a reminder from the protected-room modal
-//   4. RoomAPI.getActiveBookings() + NotificationAPI.createReminder() used
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { RoomAPI }          from "../api/roomAPI";
 import { BranchAPI }        from "../api/branchAPI";
@@ -20,6 +12,23 @@ import "../styles/RoomManagement.css";
 const BANNER_COLORS = ["green","blue","yellow","sky","purple","red"];
 const EMPTY_FORM    = { name:"", branchId:"", capacity:"", description:"", approvalRequired: true, underMaintenance: false };
 function bannerFor(i) { return BANNER_COLORS[i % BANNER_COLORS.length]; }
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function fmtDateDisplay(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", {
+    weekday: "short", day: "2-digit", month: "short", year: "numeric",
+  });
+}
+function fmtTime(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+function todayPlusOne() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+}
 
 // ─── ICONS ────────────────────────────────────────────────────────
 function RoomIcon({ size = 22, color = "#16A34A" }) {
@@ -139,12 +148,11 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onSh
   const [selectedFacIds, setSelectedFacIds] = useState(
     isEdit ? (room.facilities ?? []).map((f) => f.id) : []
   );
-  const [facDropOpen, setFacDropOpen] = useState(false);
-  const [loading,     setLoading]     = useState(false);
-  const [alert,       setAlert]       = useState({ msg:"", type:"" });
-  const [maintChecking,    setMaintChecking]    = useState(false); // spinner while pre-checking
+  const [facDropOpen,   setFacDropOpen]   = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [alert,         setAlert]         = useState({ msg:"", type:"" });
+  const [maintChecking, setMaintChecking] = useState(false);
 
-  // Pre-check before switching to maintenance: warn immediately if active bookings exist
   const handleMaintenanceToggle = async (newValue) => {
     if (isEdit && newValue === true && !form.underMaintenance) {
       setMaintChecking(true);
@@ -155,7 +163,7 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onSh
           onShowProtected && onShowProtected(bookings);
           return;
         }
-      } catch { /* if check fails, proceed — backend guards on save */ }
+      } catch { }
       setMaintChecking(false);
     }
     setForm((p) => ({ ...p, underMaintenance: newValue }));
@@ -185,7 +193,7 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onSh
         capacity:         Number(form.capacity),
         description:      form.description.trim(),
         approvalRequired: form.approvalRequired,
-        underMaintenance: form.underMaintenance,  // ← was missing
+        underMaintenance: form.underMaintenance,
       };
       let roomId;
       if (isEdit) { await RoomAPI.update(room.id, payload); roomId = room.id; }
@@ -204,21 +212,16 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onSh
       setTimeout(onSaved, 700);
     } catch (e) {
       const msg = e.message || "Something went wrong.";
-
-      // Backend blocked maintenance-flip because of active bookings →
-      // close this modal and open ProtectedRoomModal (same as delete flow)
       if (isEdit && msg.startsWith("ROOM_HAS_ACTIVE_BOOKINGS") && onShowProtected) {
         setLoading(false);
         try {
           const bookings = await RoomAPI.getActiveBookings(room.id);
-          onShowProtected(bookings);   // hands off to ProtectedRoomModal
+          onShowProtected(bookings);
         } catch {
-          // fallback: just show inline error if bookings fetch fails
           setAlert({ msg: "This room has active bookings. Cannot enable maintenance mode.", type:"error" });
         }
         return;
       }
-
       setAlert({ msg, type:"error" });
     } finally { setLoading(false); }
   };
@@ -252,8 +255,7 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onSh
 
         <label className="form-label">Branch *</label>
         <BranchDropdown
-          branches={branches}
-          value={form.branchId}
+          branches={branches} value={form.branchId}
           onChange={(id) => setForm((p) => ({ ...p, branchId: id }))}
         />
 
@@ -324,7 +326,6 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onSh
           onChange={(v) => setForm((p) => ({ ...p, approvalRequired: v }))}
         />
 
-        {/* ── Room Status (Maintenance) ── */}
         <label className="form-label" style={{ marginTop:14 }}>Room Status</label>
         <div className="apt-wrap">
           <button type="button"
@@ -362,21 +363,23 @@ function RoomModal({ mode, room, branches, allFacilities, onClose, onSaved, onSh
 }
 
 // ─── PROTECTED ROOM MODAL ─────────────────────────────────────────
-// Shown when admin tries to delete a room that has active bookings.
-// Lists the active bookings and lets admin set a reminder for the latest end time.
-function ProtectedRoomModal({ room, activeBookings, onClose }) {
-  const [reminderStatus, setReminderStatus] = useState({}); // { [bookingId]: "loading"|"done"|"error" }
+function ProtectedRoomModal({ room, activeBookings, onClose, onBlockSet }) {
+  const [reminderStatus, setReminderStatus] = useState({});
 
-  function fmtDate(iso) {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("en-IN", {
-      weekday: "short", day: "2-digit", month: "short", year: "numeric",
-    });
-  }
-  function fmtTime(iso) {
-    if (!iso) return "";
-    return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-  }
+  // Block date section state
+  const [blockDate,    setBlockDate]    = useState("");
+  const [blockReason,  setBlockReason]  = useState("Maintenance");
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [blockAlert,   setBlockAlert]   = useState({ msg:"", type:"" });
+  const [blockIsSet,   setBlockIsSet]   = useState(
+    !!(room.blockFromDate)
+  );
+  const [currentBlock, setCurrentBlock] = useState(
+    room.blockFromDate
+      ? { date: room.blockFromDate, reason: room.blockReason }
+      : null
+  );
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   const latestBooking = activeBookings.reduce((latest, b) =>
     !latest || new Date(b.endTime) > new Date(latest.endTime) ? b : latest, null);
@@ -391,17 +394,50 @@ function ProtectedRoomModal({ room, activeBookings, onClose }) {
     }
   };
 
-  const priorityColor = { High: "#DC2626", Medium: "#CA8A04", Low: "#16A34A" };
-  const statusColor   = { Approved: "#16A34A", Pending: "#CA8A04" };
+  const handleSetBlock = async () => {
+    setBlockAlert({ msg:"", type:"" });
+    if (!blockDate) return setBlockAlert({ msg:"Please select a block date.", type:"error" });
+    setBlockLoading(true);
+    try {
+      await RoomAPI.setBlockDate(room.id, { blockFromDate: blockDate, reason: blockReason });
+      const displayDate = new Date(blockDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
+      setBlockAlert({ msg:`Block set! No new bookings from ${displayDate} — ${blockReason}.`, type:"success" });
+      setBlockIsSet(true);
+      setCurrentBlock({ date: blockDate, reason: blockReason });
+      onBlockSet && onBlockSet();
+    } catch (e) {
+      setBlockAlert({ msg: e.message || "Failed to set block date.", type:"error" });
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleRemoveBlock = async () => {
+    setBlockAlert({ msg:"", type:"" });
+    setRemoveLoading(true);
+    try {
+      await RoomAPI.removeBlockDate(room.id);
+      setBlockAlert({ msg:"Block removed. Room is fully open for bookings again.", type:"success" });
+      setBlockIsSet(false);
+      setCurrentBlock(null);
+      onBlockSet && onBlockSet();
+    } catch (e) {
+      setBlockAlert({ msg: e.message || "Failed to remove block.", type:"error" });
+    } finally {
+      setRemoveLoading(false);
+    }
+  };
+
+  const priorityColor = { High:"#DC2626", Medium:"#CA8A04", Low:"#16A34A" };
+  const statusColor   = { Approved:"#16A34A", Pending:"#CA8A04" };
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal modal--protected">
+
         {/* Header */}
         <div className="modal__header">
-          <h2 className="modal__title" style={{ color:"#CA8A04" }}>
-            🔒 Room Protected
-          </h2>
+          <h2 className="modal__title" style={{ color:"#CA8A04" }}>🔒 Room Protected</h2>
           <button className="modal__close" onClick={onClose}>✕</button>
         </div>
 
@@ -409,7 +445,7 @@ function ProtectedRoomModal({ room, activeBookings, onClose }) {
         <div className="protected-alert">
           <div className="protected-alert__icon">⚠️</div>
           <div className="protected-alert__body">
-            <strong>{room.name}</strong> cannot be deleted right now.
+            <strong>{room.name}</strong> cannot be modified right now.
             <div style={{ fontSize:12, color:"#64748B", marginTop:3, fontFamily:"monospace" }}>
               It has {activeBookings.length} active booking{activeBookings.length !== 1 ? "s" : ""} that must complete first.
             </div>
@@ -428,33 +464,23 @@ function ProtectedRoomModal({ room, activeBookings, onClose }) {
                     {b.employeeName}
                   </div>
                   <div style={{ fontFamily:"monospace", fontSize:11, color:"#64748B", marginTop:2 }}>
-                    <span style={{ color: statusColor[b.status] || "#64748B" }}>
-                      ● {b.status}
-                    </span>
+                    <span style={{ color: statusColor[b.status] || "#64748B" }}>● {b.status}</span>
                     {" · "}
-                    <span style={{ color: priorityColor[b.priority] || "#64748B" }}>
-                      {b.priority} Priority
-                    </span>
+                    <span style={{ color: priorityColor[b.priority] || "#64748B" }}>{b.priority} Priority</span>
                   </div>
                   <div style={{ fontFamily:"monospace", fontSize:11, color:"#94A3B8", marginTop:2 }}>
-                    📅 {fmtDate(b.startTime)} · ⏱ {fmtTime(b.startTime)} – {fmtTime(b.endTime)}
+                    📅 {fmtDateDisplay(b.startTime)} · ⏱ {fmtTime(b.startTime)} – {fmtTime(b.endTime)}
                   </div>
                   {b.notes && (
-                    <div style={{ fontSize:11, color:"#94A3B8", fontStyle:"italic", marginTop:2 }}>
-                      "{b.notes}"
-                    </div>
+                    <div style={{ fontSize:11, color:"#94A3B8", fontStyle:"italic", marginTop:2 }}>"{b.notes}"</div>
                   )}
                 </div>
                 <button
                   className={`btn-set-reminder${rs === "done" ? " btn-set-reminder--done" : ""}`}
                   onClick={() => handleReminder(b.id)}
                   disabled={rs === "loading" || rs === "done"}
-                  title="Get notified when this meeting ends"
-                >
-                  {rs === "loading" ? "..." :
-                   rs === "done"    ? "✓ Set" :
-                   rs === "error"   ? "⚠ Retry" :
-                   "🔔 Remind me"}
+                  title="Get notified when this meeting ends">
+                  {rs === "loading" ? "..." : rs === "done" ? "✓ Set" : rs === "error" ? "⚠ Retry" : "🔔 Remind me"}
                 </button>
               </div>
             );
@@ -462,14 +488,84 @@ function ProtectedRoomModal({ room, activeBookings, onClose }) {
         </div>
 
         {/* What to do tip */}
-        <div className="protected-tip">
-          <span>💡</span>
-          <span>
-            {latestBooking
-              ? `You can delete this room after all bookings complete. The latest ends at ${fmtTime(latestBooking.endTime)} on ${fmtDate(latestBooking.endTime)}.`
-              : "You can delete this room once all active bookings are complete."
-            }
-          </span>
+        {latestBooking && (
+          <div className="protected-tip">
+            <span>💡</span>
+            <span>
+              The latest booking ends at {fmtTime(latestBooking.endTime)} on {fmtDateDisplay(latestBooking.endTime)}.
+              You can set a block date to prevent new bookings from a certain date onwards.
+            </span>
+          </div>
+        )}
+
+        {/* ── BLOCK DATE SECTION ─────────────────────────────────── */}
+        <div className="block-section">
+          <div className="block-section__title">
+            🗓 Schedule Block Date
+          </div>
+          <div className="block-section__desc">
+            From this date onwards, no new bookings will be accepted. Existing bookings before this date are not affected.
+          </div>
+
+          {blockAlert.msg && (
+            <div className={`form-alert form-alert--${blockAlert.type}`} style={{ marginBottom:10 }}>
+              {blockAlert.type === "error" ? "✕" : "✓"} {blockAlert.msg}
+            </div>
+          )}
+
+          {/* If block is already set — show current block info + remove option */}
+          {blockIsSet && currentBlock ? (
+            <div className="block-current">
+              <div className="block-current__info">
+                <span className={`block-current__badge block-current__badge--${currentBlock.reason?.toLowerCase()}`}>
+                  {currentBlock.reason === "Deletion" ? "🗑" : "🔧"} {currentBlock.reason}
+                </span>
+                <span className="block-current__date">
+                  Blocked from {new Date(currentBlock.date).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
+                </span>
+              </div>
+              <button
+                className="btn-remove-block"
+                onClick={handleRemoveBlock}
+                disabled={removeLoading}>
+                {removeLoading ? "Removing..." : "✕ Remove Block"}
+              </button>
+            </div>
+          ) : (
+            /* Block date form */
+            <div className="block-form">
+              <div className="block-form__row">
+                <div className="block-form__col">
+                  <label className="form-label" htmlFor="block-date">Block From Date *</label>
+                  <input
+                    id="block-date"
+                    type="date"
+                    className="form-input"
+                    min={todayPlusOne()}
+                    value={blockDate}
+                    onChange={(e) => setBlockDate(e.target.value)}
+                  />
+                </div>
+                <div className="block-form__col">
+                  <label className="form-label" htmlFor="block-reason">Reason *</label>
+                  <select
+                    id="block-reason"
+                    className="form-input"
+                    value={blockReason}
+                    onChange={(e) => setBlockReason(e.target.value)}>
+                    <option value="Maintenance">🔧 Going for Maintenance</option>
+                    <option value="Deletion">🗑 Going to be Deleted</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                className="btn-set-block"
+                onClick={handleSetBlock}
+                disabled={blockLoading || !blockDate}>
+                {blockLoading ? "Setting..." : "🗓 Set Block Date"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -482,25 +578,20 @@ function ProtectedRoomModal({ room, activeBookings, onClose }) {
 }
 
 // ─── DELETE MODAL ─────────────────────────────────────────────────
-// Phase 1: Check active bookings (loading spinner)
-// Phase 2a: Room is free → show normal delete confirm
-// Phase 2b: Room has active bookings → hand off to ProtectedRoomModal
 function DeleteModal({ room, onClose, onDeleted, onShowProtected }) {
-  const [phase,   setPhase]   = useState("checking"); // "checking" | "confirm" | "deleting"
-  const [error,   setError]   = useState("");
+  const [phase, setPhase] = useState("checking");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function check() {
       try {
         const bookings = await RoomAPI.getActiveBookings(room.id);
         if (bookings && bookings.length > 0) {
-          // Room is protected — close this modal, open protected modal
           onShowProtected(bookings);
         } else {
           setPhase("confirm");
         }
       } catch {
-        // If check fails, still show confirm (backend will guard on actual delete)
         setPhase("confirm");
       }
     }
@@ -515,9 +606,8 @@ function DeleteModal({ room, onClose, onDeleted, onShowProtected }) {
       onDeleted();
     } catch (e) {
       const msg = e.message || "Delete failed.";
-      // If backend returns protection error, show protected modal
       if (msg.startsWith("ROOM_HAS_ACTIVE_BOOKINGS")) {
-        onShowProtected([]);  // trigger protected modal (no booking detail from this path)
+        onShowProtected([]);
       } else {
         setError(msg);
         setPhase("confirm");
@@ -535,9 +625,7 @@ function DeleteModal({ room, onClose, onDeleted, onShowProtected }) {
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"32px", gap:12 }}>
             <div className="room-spinner" />
-            <p style={{ fontFamily:"monospace", fontSize:12, color:"#94A3B8" }}>
-              Checking for active bookings…
-            </p>
+            <p style={{ fontFamily:"monospace", fontSize:12, color:"#94A3B8" }}>Checking for active bookings…</p>
           </div>
         </div>
       </div>
@@ -552,9 +640,7 @@ function DeleteModal({ room, onClose, onDeleted, onShowProtected }) {
           <button className="modal__close" onClick={onClose}>✕</button>
         </div>
         <p className="modal__subtitle">This action cannot be undone.</p>
-
         {error && <div className="form-alert form-alert--error">✕ {error}</div>}
-
         <p style={{ fontFamily:"Georgia,serif", fontSize:15, color:"#1e3a5f", marginBottom:6 }}>
           Are you sure you want to delete:
         </p>
@@ -569,7 +655,6 @@ function DeleteModal({ room, onClose, onDeleted, onShowProtected }) {
         <p style={{ fontSize:12, color:"#94A3B8", fontFamily:"monospace", marginBottom:24 }}>
           🏢 {room.branchName || room.branch?.name || "—"} · 👥 Capacity {room.capacity ?? "—"}
         </p>
-
         <div className="modal__footer">
           <button className="btn-cancel" onClick={onClose}>Cancel</button>
           <button className="btn-delete-confirm" onClick={handleDelete} disabled={phase === "deleting"}>
@@ -595,6 +680,14 @@ function RoomCard({ room, index, onEdit, onDelete }) {
   const tint   = iconTints[color]  || iconTints.green;
   const icolor = iconColors[color] || iconColors.green;
 
+  // Block badge
+  const hasBlock = !!(room.blockFromDate);
+  const blockLabel = hasBlock
+    ? room.blockReason === "Deletion"
+      ? `🗑 Removing from ${new Date(room.blockFromDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short" })}`
+      : `🔧 Maintenance from ${new Date(room.blockFromDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short" })}`
+    : null;
+
   return (
     <div className="room-card">
       <div className={`room-card__banner room-card__banner--${color}`} />
@@ -603,13 +696,27 @@ function RoomCard({ room, index, onEdit, onDelete }) {
           <div className="room-card__icon-wrap" style={{ background: tint }}>
             <RoomIcon size={22} color={icolor} />
           </div>
-          <div className="room-card__actions">
-            <button className="room-card__action-btn room-card__action-btn--edit"
-              onClick={() => onEdit(room)} title="Edit">✏️</button>
-            <button className="room-card__action-btn room-card__action-btn--delete"
-              onClick={() => onDelete(room)} title="Delete">🗑️</button>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            {hasBlock && (
+              <span style={{
+                fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:20,
+                background: room.blockReason === "Deletion" ? "rgba(254,242,242,0.9)" : "rgba(254,249,195,0.9)",
+                color:      room.blockReason === "Deletion" ? "#DC2626" : "#CA8A04",
+                border:     room.blockReason === "Deletion" ? "1px solid rgba(220,38,38,0.2)" : "1px solid rgba(202,138,4,0.2)",
+                fontFamily:"Work Sans, sans-serif", whiteSpace:"nowrap",
+              }}>
+                {blockLabel}
+              </span>
+            )}
+            <div className="room-card__actions">
+              <button className="room-card__action-btn room-card__action-btn--edit"
+                onClick={() => onEdit(room)} title="Edit">✏️</button>
+              <button className="room-card__action-btn room-card__action-btn--delete"
+                onClick={() => onDelete(room)} title="Delete">🗑️</button>
+            </div>
           </div>
         </div>
+
         <div className="room-card__name">{room.name}</div>
         <div className="room-card__branch">🏢 {room.branchName || room.branch?.name || "—"}</div>
         <div className="room-card__meta">
@@ -697,15 +804,9 @@ export default function RoomManagement() {
         BranchAPI.getSimple(),
         FacilityAPI.getAll(),
       ]);
-      const roomList   = roomsRes.status    === "fulfilled"
-        ? (Array.isArray(roomsRes.value)    ? roomsRes.value    : (roomsRes.value?.items    ?? []))
-        : [];
-      const branchList = branchesRes.status === "fulfilled"
-        ? (Array.isArray(branchesRes.value) ? branchesRes.value : (branchesRes.value?.items ?? []))
-        : [];
-      const facList    = facRes.status      === "fulfilled"
-        ? (Array.isArray(facRes.value)      ? facRes.value      : (facRes.value?.items      ?? []))
-        : [];
+      const roomList   = roomsRes.status    === "fulfilled" ? (Array.isArray(roomsRes.value)    ? roomsRes.value    : (roomsRes.value?.items    ?? [])) : [];
+      const branchList = branchesRes.status === "fulfilled" ? (Array.isArray(branchesRes.value) ? branchesRes.value : (branchesRes.value?.items ?? [])) : [];
+      const facList    = facRes.status      === "fulfilled" ? (Array.isArray(facRes.value)      ? facRes.value      : (facRes.value?.items      ?? [])) : [];
       setRooms(roomList);
       setBranches(branchList);
       setAllFacilities(facList);
@@ -718,9 +819,7 @@ export default function RoomManagement() {
   useEffect(() => {
     let list = [...rooms];
     if (branchFilter !== "all")
-      list = list.filter((r) =>
-        String(r.branchId) === String(branchFilter) ||
-        String(r.branch?.id) === String(branchFilter));
+      list = list.filter((r) => String(r.branchId) === String(branchFilter) || String(r.branch?.id) === String(branchFilter));
     if (approvalFilter === "required") list = list.filter((r) => r.approvalRequired === true);
     if (approvalFilter === "instant")  list = list.filter((r) => r.approvalRequired === false);
     if (search.trim()) {
@@ -751,7 +850,6 @@ export default function RoomManagement() {
   const handleSaved   = () => { closeModal(); fetchAll(); };
   const handleDeleted = () => { closeModal(); fetchAll(); };
 
-  // Called by DeleteModal when active bookings are found
   const handleShowProtected = (room, activeBookings) =>
     setModal({ type:"protected", room, activeBookings });
 
@@ -764,7 +862,6 @@ export default function RoomManagement() {
   return (
     <div className="room-page">
 
-      {/* Header */}
       <div className="room-page__header">
         <div>
           <h2 className="room-page__title">
@@ -779,10 +876,8 @@ export default function RoomManagement() {
             width:"42px", height:"42px", borderRadius:"14px",
             border:"1.5px solid rgba(59,130,246,0.12)",
             background:"rgba(255,255,255,0.95)",
-            backdropFilter:"blur(12px)",
-            WebkitBackdropFilter:"blur(12px)",
+            backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)",
             boxShadow:"0 4px 16px rgba(59,130,246,0.10), inset 0 1px 0 rgba(255,255,255,1)",
-            transition:"all 0.2s",
           }}>
             <NotificationBell />
           </div>
@@ -790,7 +885,6 @@ export default function RoomManagement() {
         </div>
       </div>
 
-      {/* Stat cards */}
       <div className="room-stats-grid">
         <StatCard
           value={loading ? "—" : rooms.length} label="Total Rooms"
@@ -817,7 +911,6 @@ export default function RoomManagement() {
         />
       </div>
 
-      {/* Toolbar */}
       <div className="room-toolbar">
         <div className="room-search">
           <span className="room-search__icon">🔍</span>
@@ -853,19 +946,14 @@ export default function RoomManagement() {
 
       {error && <div className="form-alert form-alert--error">⚠ {error}</div>}
 
-      {/* Grid */}
       <div className="room-grid">
         {loading ? (
           <div className="room-loading"><div className="room-spinner" /><p>Loading rooms...</p></div>
         ) : filtered.length === 0 ? (
           <div className="room-empty">
             <div className="room-empty__icon"><RoomIcon size={52} color="#CBD5E1" /></div>
-            <div className="room-empty__title">
-              {hasFilters ? "No rooms match your filters" : "No rooms yet"}
-            </div>
-            <div className="room-empty__sub">
-              {hasFilters ? "Try clearing your filters" : "Click 'Add Room' to create your first room"}
-            </div>
+            <div className="room-empty__title">{hasFilters ? "No rooms match your filters" : "No rooms yet"}</div>
+            <div className="room-empty__sub">{hasFilters ? "Try clearing your filters" : "Click 'Add Room' to create your first room"}</div>
           </div>
         ) : (
           paginated.map((room, i) => (
@@ -878,7 +966,6 @@ export default function RoomManagement() {
 
       <Pagination current={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={setPage} />
 
-      {/* Modals */}
       {modal?.type === "add" && (
         <RoomModal mode="add" branches={branches} allFacilities={allFacilities}
           onClose={closeModal} onSaved={handleSaved} />
@@ -902,6 +989,7 @@ export default function RoomManagement() {
           room={modal.room}
           activeBookings={modal.activeBookings}
           onClose={closeModal}
+          onBlockSet={fetchAll}
         />
       )}
     </div>

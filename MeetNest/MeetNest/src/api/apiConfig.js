@@ -1,5 +1,3 @@
-// src/api/apiConfig.js
-
 const BASE_URL = "https://localhost:7198/api";
 
 export const ROUTES = {
@@ -27,6 +25,8 @@ export const ROUTES = {
     delete:          (id)       => `${BASE_URL}/rooms/${id}`,
     employeeRooms:   `${BASE_URL}/rooms/employee`,
     activeBookings:  (id)       => `${BASE_URL}/rooms/${id}/active-bookings`,
+    setBlock:        (id)       => `${BASE_URL}/rooms/${id}/block`,   // ← NEW
+    removeBlock:     (id)       => `${BASE_URL}/rooms/${id}/block`,   // ← NEW (same URL, DELETE method)
   },
   facility: {
     getAll:  `${BASE_URL}/facilities`,

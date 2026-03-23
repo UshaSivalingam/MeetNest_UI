@@ -1,5 +1,3 @@
-// src/pages/MyBookings.jsx
-
 import { useState, useEffect, useCallback } from "react";
 import { BookingAPI } from "../api/bookingAPI";
 import Pagination from "../components/Pagination";

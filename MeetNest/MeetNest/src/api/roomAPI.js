@@ -1,8 +1,5 @@
-// src/api/roomAPI.js
-// ── REPLACE your existing file entirely ──
-
 import { ROUTES, request } from "./apiConfig";
-
+ 
 export const RoomAPI = {
   getAll:           ()         => request(`${ROUTES.room.getAll}?pageSize=1000`),
   getByBranch:      (branchId) => request(ROUTES.room.getByBranch(branchId)),
@@ -11,7 +8,11 @@ export const RoomAPI = {
   update:           (id, data) => request(ROUTES.room.update(id), { method: "PUT",    body: JSON.stringify(data) }),
   delete:           (id)       => request(ROUTES.room.delete(id), { method: "DELETE" }),
   getEmployeeRooms: ()         => request(ROUTES.room.employeeRooms),
-
-  // ── NEW: check active bookings before delete ──────────────────
-  getActiveBookings: (id)      => request(ROUTES.room.activeBookings(id)),
+  getActiveBookings:(id)       => request(ROUTES.room.activeBookings(id)),
+ 
+  // ── Block scheduling ──────────────────────────────────────────
+  // body: { blockFromDate: "2026-04-08", reason: "Maintenance" | "Deletion" }
+  setBlockDate:     (id, body) => request(ROUTES.room.setBlock(id),    { method: "PUT",    body: JSON.stringify(body) }),
+  removeBlockDate:  (id)       => request(ROUTES.room.removeBlock(id), { method: "DELETE" }),
 };
+ 

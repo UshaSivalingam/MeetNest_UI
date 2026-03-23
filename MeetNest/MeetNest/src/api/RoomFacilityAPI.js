@@ -1,4 +1,3 @@
-// src/api/roomFacilityAPI.js
 import { ROUTES, request } from "./apiConfig";
 
 export const RoomFacilityAPI = {

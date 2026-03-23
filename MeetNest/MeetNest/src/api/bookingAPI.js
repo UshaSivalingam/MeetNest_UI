@@ -1,4 +1,3 @@
-// src/api/bookingAPI.js
 import { ROUTES, request } from "./apiConfig";
 
 export const BookingAPI = {

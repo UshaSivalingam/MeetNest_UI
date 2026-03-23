@@ -1,5 +1,3 @@
-// src/pages/WelcomePage.jsx
-
 import { useState, useEffect } from "react";
 import "../styles/WelcomePage.css";
 

@@ -1,4 +1,3 @@
-// src/routes/ProtectedRoute.jsx
 import { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 

@@ -1,7 +1,6 @@
-// src/pages/SignupPage.jsx
-
 import { useState, useEffect } from "react";
 import Logo  from "../components/Logo";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Alert from "../components/Alert";
 import { AuthAPI } from "../api/authAPI";
 import "../styles/SignupPage.css";
@@ -30,6 +29,7 @@ export default function SignupPage({ onBack }) {
     if (form.password.length < 6)               return "Password must be at least 6 characters.";
     if (form.password !== form.confirmPassword) return "Passwords do not match.";
     if (!form.branchId.trim())                  return "Branch ID is required.";
+    if (isNaN(Number(form.branchId)))           return "Branch ID must be a number."; // ← fix
     return null;
   };
 
@@ -96,7 +96,7 @@ export default function SignupPage({ onBack }) {
           />
           <button className="signup-eye-btn" onClick={() => setShowPass((p) => !p)} tabIndex={-1}
             aria-label={showPass ? "Hide password" : "Show password"}>
-            {showPass ? "🙈" : "👁️"}
+            {showPass ? <FaEyeSlash /> : <FaEye />}
           </button>
         </div>
 
@@ -110,16 +110,17 @@ export default function SignupPage({ onBack }) {
           />
           <button className="signup-eye-btn" onClick={() => setShowConfirm((p) => !p)} tabIndex={-1}
             aria-label={showConfirm ? "Hide password" : "Show password"}>
-            {showConfirm ? "🙈" : "👁️"}
+            {showConfirm ? <FaEyeSlash /> : <FaEye />}
           </button>
         </div>
 
-        {/* Branch ID */}
+        {/* Branch ID — changed to number input */}
         <label className="signup-label" htmlFor="signup-branch">Branch ID</label>
-        <input id="signup-branch" type="text"
+        <input id="signup-branch" type="number"
           className="signup-input signup-input--green"
-          placeholder="e.g. BR-001" value={form.branchId}
+          placeholder="e.g. 5" value={form.branchId}
           onChange={set("branchId")} onKeyDown={handleKeyDown}
+          min="1"
           style={{ marginBottom: 22 }}
         />
 

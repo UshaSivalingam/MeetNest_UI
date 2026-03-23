@@ -1,5 +1,3 @@
-// src/components/Alert.jsx
-
 import "../styles/Alert.css";
 
 export default function Alert({ message, type }) {

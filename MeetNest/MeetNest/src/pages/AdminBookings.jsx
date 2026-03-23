@@ -1,5 +1,3 @@
-// src/pages/AdminBookings.jsx
-
 import { useState, useEffect, useCallback } from "react";
 import { AdminAPI } from "../api/adminAPI";
 import Pagination from "../components/Pagination";

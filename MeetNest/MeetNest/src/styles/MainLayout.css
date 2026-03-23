@@ -1,13 +1,5 @@
-/* src/styles/MainLayout.css */
-
 /* ── LAYOUT WRAPPER ─────────────────────────────────────────────── */
-/*
-  KEY FIX:
-  - Sidebar is position:fixed → always sticks to the left of the viewport
-  - .layout__main gets margin-left equal to sidebar width so content
-    doesn't hide behind the sidebar
-  - Only .layout__content scrolls, sidebar never moves
-*/
+
 .layout {
   display:    flex;
   width:      100%;
@@ -23,11 +15,11 @@
 
 /* ── SIDEBAR — FIXED ────────────────────────────────────────────── */
 .sidebar {
-  position:        fixed;       /* ← KEY: fixed to viewport, never scrolls */
+  position:        fixed;       
   top:             0;
   left:            0;
   width:           240px;
-  height:          100vh;       /* ← always full screen height */
+  height:          100vh;       
   background:      rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-right:    1.5px solid rgba(59, 130, 246, 0.12);

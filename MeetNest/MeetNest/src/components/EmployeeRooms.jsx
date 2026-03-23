@@ -1,4 +1,3 @@
-// src/components/EmployeeRooms.jsx
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { RoomAPI } from "../api/roomAPI";
 

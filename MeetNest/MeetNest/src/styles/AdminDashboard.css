@@ -1,5 +1,3 @@
-/* src/styles/AdminDashboard.css */
-
 /* ── DASHBOARD WRAPPER ──────────────────────────────────────────── */
 .dash {
   display:        flex;
@@ -519,7 +517,6 @@
   flex-wrap:       wrap;
   gap:             12px;
 
-  /* ── ADD THESE ── */
   background:      rgba(255, 255, 255, 0.88);
   border-radius:   20px;
   padding:         20px 24px;

@@ -1,9 +1,8 @@
-// src/api/branchAPI.js
 import { ROUTES, request } from "./apiConfig";
 
 export const BranchAPI = {
   // All branches with TotalRooms / TotalEmployees / TotalBookings — for Branch Management cards
-  getWithStats: () => request(ROUTES.branch.getWithStats),           // ← ADD (Bug 1 fix)
+  getWithStats: () => request(ROUTES.branch.getWithStats),           
 
   // Simple flat list — for dropdowns (no pagination needed)
   getSimple: () => request(`${ROUTES.branch.getAll}?pageSize=1000`),

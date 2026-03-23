@@ -1,4 +1,3 @@
-// src/api/authAPI.js
 import { ROUTES, request, TokenService, UserService } from "./apiConfig";
 
 export const AuthAPI = {
@@ -22,7 +21,7 @@ export const AuthAPI = {
   registerEmployee: ({ fullName, email, password, branchId }) =>
     request(ROUTES.auth.registerEmployee, {
       method: "POST",
-      body: JSON.stringify({ fullName, email, password, branchId }),
+      body: JSON.stringify({ fullName, email, password, branchId: Number(branchId) }), // ← fix
     }),
 
   logout: () => TokenService.clear(),

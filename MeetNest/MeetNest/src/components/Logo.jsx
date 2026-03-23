@@ -1,5 +1,3 @@
-// src/components/Logo.jsx
-
 import "../styles/Logo.css";
 
 export default function Logo({ size = "md" }) {

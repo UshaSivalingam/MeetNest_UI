@@ -1,5 +1,3 @@
-/* src/styles/Alert.css */
-
 .alert {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px; border-radius: 10px;

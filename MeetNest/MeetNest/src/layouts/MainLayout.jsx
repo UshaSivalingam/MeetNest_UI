@@ -1,5 +1,3 @@
-// src/layouts/MainLayout.jsx
-
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "../components/NotificationBell";

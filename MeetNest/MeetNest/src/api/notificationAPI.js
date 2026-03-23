@@ -1,6 +1,3 @@
-// src/api/notificationAPI.js
-// ── Uses the same ROUTES + request pattern as all other API files ──
-
 import { ROUTES, request } from "./apiConfig";
 
 export const NotificationAPI = {

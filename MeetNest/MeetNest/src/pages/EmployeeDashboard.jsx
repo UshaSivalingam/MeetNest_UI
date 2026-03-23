@@ -1,4 +1,3 @@
-// src/pages/EmployeeDashboard.jsx
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { BookingAPI } from "../api/bookingAPI";
 import { RoomAPI } from "../api/roomAPI";

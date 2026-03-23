@@ -1,22 +1,20 @@
-// src/pages/LoginPage.jsx
-
 import { useState, useEffect } from "react";
-import Logo      from "../components/Logo";
-import Alert     from "../components/Alert";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import Logo from "../components/Logo";
+import Alert from "../components/Alert";
 import { useAuth } from "../context/AuthContext";
-import { TokenService } from "../api/apiConfig";
 import "../styles/LoginPage.css";
 
 export default function LoginPage({ onLoginSuccess, onSignup }) {
   const { login, logout } = useAuth();
 
-  const [visible,  setVisible]  = useState(false);
-  const [role,     setRole]     = useState("employee");
-  const [email,    setEmail]    = useState("");
+  const [visible, setVisible] = useState(false);
+  const [role, setRole] = useState("employee");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [alert,    setAlert]    = useState({ message: "", type: "" });
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({ message: "", type: "" });
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80);
@@ -33,6 +31,7 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
 
     if (!email.trim())
       return setAlert({ message: "Email is required.", type: "error" });
+
     if (!password)
       return setAlert({ message: "Password is required.", type: "error" });
 
@@ -42,9 +41,7 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
       const data = await login({ email, password });
       const userRole = data?.user?.role?.trim().toLowerCase();
 
-      // ── Role tab mismatch checks ──────────────────────────────
       if (role === "admin" && userRole !== "admin") {
-        // ✅ Use logout() so AuthContext state is also cleared, not just localStorage
         logout();
         return setAlert({
           message: "Access denied. This account is not an Admin.",
@@ -60,16 +57,12 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
         });
       }
 
-      // ── Success ───────────────────────────────────────────────
       setAlert({
         message: `Welcome back, ${data?.user?.fullName || email}!`,
         type: "success",
       });
 
-      // ✅ No setTimeout — call immediately so there's no window
-      //    where page="app" but token is missing
       onLoginSuccess?.(data?.user);
-
     } catch (err) {
       setAlert({
         message: err.message || "Login failed. Check your credentials.",
@@ -80,12 +73,10 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
     }
   };
 
-  const handleKeyDown = (e) => { if (e.key === "Enter") handleLogin(); };
-
   return (
     <div className="login-page">
-      <div className="login-blob login-blob--blue-tr"   />
-      <div className="login-blob login-blob--green-bl"  />
+      <div className="login-blob login-blob--blue-tr" />
+      <div className="login-blob login-blob--green-bl" />
       <div className="login-blob login-blob--yellow-bm" />
 
       <div className={`login-card${visible ? " visible" : ""}`}>
@@ -96,13 +87,20 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
         {/* Role toggle */}
         <div className="login-role-toggle">
           <button
-            className={`login-role-btn${role === "admin" ? " login-role-btn--active-admin" : ""}`}
+            type="button"
+            className={`login-role-btn${
+              role === "admin" ? " login-role-btn--active-admin" : ""
+            }`}
             onClick={() => handleRoleChange("admin")}
           >
             🏢 Admin
           </button>
+
           <button
-            className={`login-role-btn${role === "employee" ? " login-role-btn--active-employee" : ""}`}
+            type="button"
+            className={`login-role-btn${
+              role === "employee" ? " login-role-btn--active-employee" : ""
+            }`}
             onClick={() => handleRoleChange("employee")}
           >
             👤 Employee
@@ -111,42 +109,64 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
 
         <Alert message={alert.message} type={alert.type} />
 
-        {/* Email */}
-        <label className="login-label" htmlFor="login-email">Email</label>
-        <input
-          id="login-email" type="email" className="login-input"
-          placeholder="you@company.com"
-          value={email} onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={handleKeyDown} autoComplete="email"
-        />
-
-        {/* Password */}
-        <label className="login-label" htmlFor="login-password">Password</label>
-        <div className="login-password-wrapper">
+        {/* Form */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin();
+          }}
+          noValidate
+        >
+          {/* Email */}
+          <label className="login-label" htmlFor="login-email">
+            Email
+          </label>
           <input
-            id="login-password" type={showPass ? "text" : "password"}
-            className="login-input" placeholder="••••••••"
-            value={password} onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={handleKeyDown} autoComplete="current-password"
+            id="login-email"
+            type="email"
+            className="login-input"
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
           />
-          <button
-            className="login-eye-btn"
-            onClick={() => setShowPass((p) => !p)}
-            tabIndex={-1}
-            aria-label={showPass ? "Hide password" : "Show password"}
-          >
-            {showPass ? "🙈" : "👁️"}
+
+          {/* Password */}
+          <label className="login-label" htmlFor="login-password">
+            Password
+          </label>
+          <div className="login-password-wrapper">
+            <input
+              id="login-password"
+              type={showPass ? "text" : "password"}
+              className="login-input"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              className="login-eye-btn"
+              onClick={() => setShowPass((p) => !p)}
+              tabIndex={-1}
+              aria-label={showPass ? "Hide password" : "Show password"}
+            >
+              {showPass ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
+
+          <div className="login-forgot">
+            <span>Forgot password?</span>
+          </div>
+
+          {/* Sign In */}
+          <button type="submit" className="login-btn-signin" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
           </button>
-        </div>
+        </form>
 
-        <div className="login-forgot"><span>Forgot password?</span></div>
-
-        {/* Sign In */}
-        <button className="login-btn-signin" onClick={handleLogin} disabled={loading}>
-          {loading ? "Signing in..." : "Sign In"}
-        </button>
-
-        {/* Sign Up — employee only */}
+        {/* Sign Up — employee only, outside form */}
         {role === "employee" && (
           <>
             <div className="login-divider">
@@ -154,7 +174,8 @@ export default function LoginPage({ onLoginSuccess, onSignup }) {
               <span className="login-divider__text">OR</span>
               <div className="login-divider__line" />
             </div>
-            <button className="login-btn-signup" onClick={onSignup}>
+
+            <button type="button" className="login-btn-signup" onClick={onSignup}>
               Sign Up / Register
             </button>
           </>

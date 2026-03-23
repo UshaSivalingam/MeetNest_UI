@@ -1,9 +1,3 @@
-// src/components/NotificationBell.jsx
-// FIX: dropdown rendered via ReactDOM.createPortal into document.body
-// This fully escapes ALL parent stacking contexts (animations, transforms,
-// backdrop-filter, overflow:hidden) — the only correct solution when any
-// ancestor has a CSS animation with transform running at render time.
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { NotificationAPI } from "../api/notificationAPI";
@@ -22,7 +16,7 @@ function typeMeta(type = "") {
 
 function timeAgo(iso) {
   if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
+  const diff  = Date.now() - new Date(iso).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(mins / 60);
   const days  = Math.floor(hours / 24);
@@ -75,7 +69,9 @@ export default function NotificationBell() {
     if (open) fetchNotifications();
   }, [open, fetchNotifications]);
 
-  // ── Close on outside click ────────────────────────────────────
+  // ── Close on outside click only ───────────────────────────────
+  // Scroll-close is intentionally removed — dropdown is position:fixed
+  // via portal so it never misaligns, and scroll must work inside the list.
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -86,14 +82,6 @@ export default function NotificationBell() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  // ── Close on scroll (keeps dropdown aligned) ─────────────────
-  useEffect(() => {
-    if (!open) return;
-    const handler = () => setOpen(false);
-    window.addEventListener("scroll", handler, true);
-    return () => window.removeEventListener("scroll", handler, true);
   }, [open]);
 
   // ── Toggle: compute position from bell's viewport rect ───────
@@ -200,7 +188,7 @@ export default function NotificationBell() {
         </div>
       )}
     </div>,
-    document.body   // ← rendered directly on body, outside ALL stacking contexts
+    document.body
   ) : null;
 
   return (
