@@ -13,12 +13,14 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
     { key: "rooms",      label: "Rooms",      icon: "🚪" },
     { key: "facilities", label: "Facilities", icon: "🔧" },
     { key: "bookings",   label: "Bookings",   icon: "📋" },
+    //{ key: "calendar",   label: "Calendar",   icon: "📆" },
   ];
 
   const employeeNav = [
     { key: "dashboard",    label: "Dashboard",    icon: "🏠" },
     { key: "browse-rooms", label: "Browse Rooms", icon: "🚪" },
     { key: "my-bookings",  label: "My Bookings",  icon: "📋" },
+    { key: "calendar",     label: "Calendar",     icon: "📆" },
   ];
 
   const navItems = isAdmin ? adminNav : employeeNav;

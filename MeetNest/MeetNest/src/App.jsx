@@ -9,9 +9,11 @@ import BranchManagement   from "./pages/BranchManagement";
 import RoomManagement     from "./pages/RoomManagement";
 import FacilityManagement from "./pages/FacilityManagement";
 import AdminBookings      from "./pages/AdminBookings";
+import AdminCalendar      from "./pages/AdminCalendar";    
 import BrowseRooms        from "./pages/BrowseRooms";
 import MyBookings         from "./pages/MyBookings";
 import EmployeeDashboard  from "./pages/EmployeeDashboard";
+import EmployeeCalendar   from "./pages/EmployeeCalendar"; 
 import MainLayout         from "./layouts/MainLayout";
 
 function ComingSoon({ pageName }) {
@@ -65,13 +67,14 @@ function PageContent({ currentPage, onNavigate }) {
     if (currentPage === "rooms")      return <RoomManagement />;
     if (currentPage === "facilities") return <FacilityManagement />;
     if (currentPage === "bookings")   return <AdminBookings />;
-    return <AccessDenied />;
+    if (currentPage === "calendar")   return <AdminCalendar />;     return <AccessDenied />;
   }
 
   if (isEmployee) {
     if (currentPage === "dashboard")    return <EmployeeDashboard onNavigate={onNavigate} />;
     if (currentPage === "browse-rooms") return <BrowseRooms       onNavigate={onNavigate} />;
     if (currentPage === "my-bookings")  return <MyBookings        onNavigate={onNavigate} />;
+    if (currentPage === "calendar")     return <EmployeeCalendar />;
     return <AccessDenied />;
   }
 
